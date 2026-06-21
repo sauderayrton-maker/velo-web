@@ -491,7 +491,7 @@
             <div class="t-dot t-dot-r"></div>
             <div class="t-dot t-dot-y"></div>
             <div class="t-dot t-dot-g"></div>
-            <span class="t-title-label">zsh — velo-de</span>
+            <span class="t-title-label">velo-de</span>
         </div>
         <div class="t-body">
             <div class="t-line">
@@ -499,18 +499,18 @@
                 <code class="t-cmd">git clone <span class="t-arg">https://github.com/sauder/velo-de</span></code>
                 <button class="copy-btn" onclick="copyCmd(this,'git clone https://github.com/sauder/velo-de')">Copy</button>
             </div>
-            <div class="t-line">
-                <span class="t-prompt">$</span>
-                <code class="t-cmd">cd <span class="t-arg">velo-de</span> &amp;&amp; ./install.sh</code>
-                <button class="copy-btn" onclick="copyCmd(this,'cd velo-de && ./install.sh')">Copy</button>
+            <div class="t-line t-output" style="margin-top:4px">
+                <span class="t-comment">→ Full install instructions in the README ↓</span>
             </div>
-            <div class="t-line t-output" style="margin-top:6px">
-                <span class="t-comment">→ Checking dependencies...</span>
-            </div>
-            <div class="t-line t-output">
-                <span class="t-ok">✓</span>
-                <span class="t-comment" id="install-anim">Building 9 components...</span>
-            </div>
+        </div>
+        <div style="padding:14px 28px 18px;border-top:1px solid rgba(195,215,240,0.055);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <span style="font-size:12px;color:rgba(138,180,212,0.36)">See the README for dependencies, build steps and options.</span>
+            <a href="https://github.com/sauder/velo-de#readme" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:rgba(190,222,250,0.78);background:rgba(138,180,212,0.09);border:1px solid rgba(138,180,212,0.22);border-radius:8px;padding:7px 16px;text-decoration:none;white-space:nowrap;transition:background 140ms,box-shadow 140ms"
+               onmouseover="this.style.background='rgba(138,180,212,0.17)';this.style.boxShadow='0 0 14px rgba(138,180,212,0.10)'"
+               onmouseout="this.style.background='rgba(138,180,212,0.09)';this.style.boxShadow=''">
+                Read the README →
+            </a>
         </div>
         <div class="install-checklist">
             <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Shell</span></div>

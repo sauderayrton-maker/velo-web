@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo Commit — AI Git Tool</title>
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        :root{--accent:#8ab4d4;--bg:#09090c;--text:rgba(228,238,252,0.88);--text-sub:rgba(165,190,218,0.55);--border:rgba(195,215,240,0.09);--glass:linear-gradient(rgba(18,21,28,0.94),rgba(7,8,13,0.96))}
+        html{scroll-behavior:smooth}
+        body{background:var(--bg);color:var(--text);font-family:"Inter","SF Pro Display","Cantarell",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;opacity:0.028;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E")}
+        #scroll-progress{position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(80,140,190,0.6),rgba(138,180,212,0.9) 50%,rgba(170,215,245,1));transform-origin:left;transform:scaleX(0);z-index:9100;pointer-events:none;transition:transform 60ms linear}
+        .nav-wrap{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding:14px 24px;z-index:500;pointer-events:none}
+        nav{pointer-events:all;display:flex;align-items:center;padding:3px 5px;border-radius:999px;background:var(--glass);border:1px solid var(--border);box-shadow:inset 0 1px 0 rgba(174,206,236,0.09),inset 0 -1px 0 rgba(0,0,0,0.50),0 8px 32px rgba(0,0,0,0.65);position:relative}
+        nav::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.38) 50%,transparent)}
+        .nav-brand{font-size:9.5px;font-weight:700;letter-spacing:4.5px;color:rgba(138,180,212,0.48);padding:6px 16px 6px 12px;text-decoration:none;transition:color 160ms}
+        .nav-brand:hover{color:rgba(190,222,250,0.90)}
+        .nav-sep{width:1px;height:16px;background:rgba(195,215,240,0.07);margin:0 2px}
+        .nav-link,.nav-back{font-size:12.5px;font-weight:450;color:rgba(190,214,240,0.44);text-decoration:none;padding:5px 14px;border-radius:999px;transition:background 110ms,color 110ms;white-space:nowrap}
+        .nav-back{font-size:12px;color:rgba(138,180,212,0.38)}
+        .nav-link:hover,.nav-back:hover{background:rgba(138,180,212,0.10);color:rgba(228,242,255,0.90)}
+        .reveal{opacity:0;transform:translateY(24px)}.reveal.in{opacity:1;transform:none;transition:opacity 700ms cubic-bezier(0.22,1,0.36,1),transform 700ms cubic-bezier(0.22,1,0.36,1)}
+        .d1{transition-delay:90ms}.d2{transition-delay:180ms}.d3{transition-delay:270ms}
+        @keyframes heroUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+        .hero{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:110px 24px 80px;text-align:center;overflow:hidden}
+        .hero-glow{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);width:1000px;height:500px;background:radial-gradient(ellipse,rgba(138,180,212,0.065) 0%,transparent 65%);pointer-events:none}
+        .breadcrumb{font-size:11px;color:rgba(138,180,212,0.30);margin-bottom:18px;animation:heroUp 700ms 100ms cubic-bezier(0.22,1,0.36,1) both}
+        .breadcrumb a{color:rgba(138,180,212,0.42);text-decoration:none}
+        .hero-eyebrow{font-size:9px;font-weight:700;letter-spacing:5px;color:rgba(138,180,212,0.42);text-transform:uppercase;margin-bottom:22px;animation:heroUp 700ms 200ms cubic-bezier(0.22,1,0.36,1) both}
+        .hero-title{font-size:clamp(44px,7vw,88px);font-weight:750;line-height:1.0;letter-spacing:-2px;color:rgba(234,242,254,0.96);margin-bottom:22px;animation:heroUp 700ms 320ms cubic-bezier(0.22,1,0.36,1) both}
+        .hero-title em{font-style:normal;color:var(--accent)}
+        .hero-sub{font-size:15px;color:var(--text-sub);max-width:480px;line-height:1.75;margin-bottom:52px;animation:heroUp 700ms 440ms cubic-bezier(0.22,1,0.36,1) both}
+
+        /* Commit demo */
+        .commit-wrap{width:100%;max-width:560px;animation:heroUp 700ms 560ms cubic-bezier(0.22,1,0.36,1) both}
+        .commit-panel{background:linear-gradient(160deg,rgba(10,12,18,0.97),rgba(5,6,10,0.98));border:1px solid rgba(195,215,240,0.10);border-radius:20px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(174,206,236,0.07),0 32px 80px rgba(0,0,0,0.75),0 0 60px rgba(138,180,212,0.07)}
+        .cp-titlebar{display:flex;align-items:center;gap:7px;padding:12px 16px;border-bottom:1px solid rgba(195,215,240,0.06)}
+        .cp-dot{width:9px;height:9px;border-radius:50%}
+        .cp-title{margin-left:auto;font-size:11px;color:rgba(150,182,214,0.26);letter-spacing:0.5px}
+        .cp-diff{font-family:"JetBrains Mono","SF Mono",monospace;font-size:11px;padding:14px 18px;border-bottom:1px solid rgba(195,215,240,0.06);max-height:140px;overflow-y:auto;line-height:1.6}
+        .diff-add{color:rgba(100,210,130,0.70)}
+        .diff-rem{color:rgba(220,90,90,0.55)}
+        .diff-meta{color:rgba(138,180,212,0.36)}
+        .diff-ctx{color:rgba(190,214,240,0.34)}
+        .cp-msg-area{padding:14px 18px}
+        .cp-msg-label{font-size:9px;font-weight:700;letter-spacing:2px;color:rgba(138,180,212,0.32);text-transform:uppercase;margin-bottom:8px}
+        .cp-msg{font-size:13px;color:rgba(220,234,252,0.80);line-height:1.55;min-height:52px;font-family:inherit}
+        .cp-msg .cursor{display:inline-block;width:2px;height:13px;background:rgba(138,180,212,0.65);animation:blink 1s step-end infinite;vertical-align:text-bottom;margin-left:1px}
+        @keyframes blink{50%{opacity:0}}
+        .cp-actions{display:flex;gap:8px;padding:12px 18px;border-top:1px solid rgba(195,215,240,0.06)}
+        .cp-btn{flex:1;padding:8px;border-radius:10px;font-family:inherit;font-size:12.5px;cursor:pointer;transition:all 140ms;border:1px solid}
+        .cp-btn-gen{background:rgba(138,180,212,0.09);border-color:rgba(138,180,212,0.22);color:rgba(190,222,250,0.78)}
+        .cp-btn-gen:hover{background:rgba(138,180,212,0.16);box-shadow:0 0 14px rgba(138,180,212,0.10)}
+        .cp-btn-commit{background:rgba(100,210,130,0.08);border-color:rgba(100,210,130,0.22);color:rgba(130,230,150,0.78)}
+        .cp-btn-commit:hover{background:rgba(100,210,130,0.14);box-shadow:0 0 14px rgba(100,210,130,0.08)}
+        .cp-btn-commit:disabled{opacity:0.35;cursor:not-allowed}
+
+        .section{padding:90px 24px;max-width:1080px;margin:0 auto}
+        .section-eyebrow{font-size:9px;font-weight:700;letter-spacing:4px;color:rgba(138,180,212,0.36);text-transform:uppercase;text-align:center;margin-bottom:12px}
+        .section-title{font-size:clamp(24px,3.2vw,38px);font-weight:650;color:rgba(234,242,254,0.93);text-align:center;letter-spacing:-0.5px;margin-bottom:56px}
+        .divider{width:100%;max-width:1080px;margin:0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.12) 30%,rgba(138,180,212,0.12) 70%,transparent)}
+        .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        @media(max-width:820px){.feature-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:520px){.feature-grid{grid-template-columns:1fr}}
+        .feat-card{background:linear-gradient(160deg,rgba(14,17,24,0.95),rgba(7,8,14,0.97));border:1px solid rgba(195,215,240,0.085);border-radius:18px;padding:26px;box-shadow:inset 0 1px 0 rgba(174,206,236,0.07),0 12px 36px rgba(0,0,0,0.45)}
+        .feat-icon{width:40px;height:40px;border-radius:12px;background:rgba(138,180,212,0.07);border:1px solid rgba(138,180,212,0.13);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+        .feat-icon svg{width:18px;height:18px;fill:none;stroke:rgba(138,180,212,0.70);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+        .feat-name{font-size:16px;font-weight:640;color:rgba(234,242,254,0.92);letter-spacing:-0.2px;margin-bottom:8px}
+        .feat-desc{font-size:13px;color:rgba(165,190,218,0.52);line-height:1.70}
+        .more-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+        @media(max-width:700px){.more-grid{grid-template-columns:repeat(2,1fr)}}
+        .more-card{background:linear-gradient(160deg,rgba(14,17,24,0.95),rgba(7,8,14,0.97));border:1px solid rgba(195,215,240,0.07);border-radius:14px;padding:16px 18px;text-decoration:none;display:block;transition:border-color 150ms,transform 180ms}
+        .more-card:hover{border-color:rgba(138,180,212,0.16);transform:translateY(-2px)}
+        .more-card-name{font-size:13.5px;font-weight:600;color:rgba(220,232,250,0.80);margin-bottom:4px}
+        .more-card-sub{font-size:11px;color:rgba(138,180,212,0.34)}
+        footer{border-top:1px solid rgba(195,215,240,0.05);padding:50px 24px;text-align:center}
+        .footer-brand{font-size:9px;font-weight:700;letter-spacing:5px;color:rgba(138,180,212,0.26);text-transform:uppercase;margin-bottom:8px}
+        .footer-text{font-size:11px;color:rgba(150,182,214,0.18)}
+    </style>
+</head>
+<body>
+<div id="scroll-progress"></div>
+<div class="nav-wrap"><nav>
+    <a class="nav-brand" href="index.html">VELO</a>
+    <div class="nav-sep"></div>
+    <a class="nav-back" href="index.html#suite">← Suite</a>
+    <a class="nav-link" href="velo-bar.html">Shell</a>
+    <a class="nav-link" href="velo-assistant.html">Assistant</a>
+    <a class="nav-link" href="index.html#install">Install</a>
+</nav></div>
+
+<section class="hero">
+    <div class="hero-glow"></div>
+    <p class="breadcrumb"><a href="index.html">Velo</a> / Commit</p>
+    <p class="hero-eyebrow">AI Git Tool</p>
+    <h1 class="hero-title">Diff in. Message<br><em>out. One key.</em></h1>
+    <p class="hero-sub">Pipes your staged diff to Claude and streams a commit message into a Velo glass window. One keystroke from staged to committed — no copy-paste, no terminal.</p>
+
+    <div class="commit-wrap">
+        <div class="commit-panel">
+            <div class="cp-titlebar">
+                <div class="cp-dot" style="background:rgba(255,95,87,0.52)"></div>
+                <div class="cp-dot" style="background:rgba(255,189,46,0.52)"></div>
+                <div class="cp-dot" style="background:rgba(40,200,64,0.52)"></div>
+                <span class="cp-title">Velo Commit</span>
+            </div>
+            <div class="cp-diff" id="cp-diff">
+<span class="diff-meta">diff --git a/src/bar.rs b/src/bar.rs</span>
+<span class="diff-meta">@@ -142,6 +142,14 @@ impl BarWidget {</span>
+<span class="diff-add">+    fn on_bt_toggle(&amp;self) {</span>
+<span class="diff-add">+        let state = self.bt_state.get();</span>
+<span class="diff-add">+        BluetoothManager::toggle(!state);</span>
+<span class="diff-add">+        self.bt_state.set(!state);</span>
+<span class="diff-add">+        self.update_bt_pill();</span>
+<span class="diff-add">+    }</span>
+<span class="diff-ctx"> }</span>
+            </div>
+            <div class="cp-msg-area">
+                <div class="cp-msg-label">Generated message</div>
+                <div class="cp-msg" id="cp-msg"><span style="color:rgba(138,180,212,0.28);font-style:italic">Click "Generate" to call Claude…</span></div>
+            </div>
+            <div class="cp-actions">
+                <button class="cp-btn cp-btn-gen" onclick="generateMsg()">✦ Generate</button>
+                <button class="cp-btn cp-btn-commit" id="commit-btn" onclick="doCommit()" disabled>↳ Commit</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+<section class="section">
+    <p class="section-eyebrow reveal">Features</p>
+    <h2 class="section-title reveal d1">Git commits, elevated</h2>
+    <div class="feature-grid">
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/></svg></div><div class="feat-name">Claude API</div><p class="feat-desc">Sends your staged diff to Claude Sonnet with a structured prompt. Returns a concise, accurate commit message.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="feat-name">Streaming</div><p class="feat-desc">The message streams token-by-token into the glass panel — you see the response build in real time.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div><div class="feat-name">One-Click Commit</div><p class="feat-desc">Approve the generated message and click Commit. Velo runs git commit with it — no copy-paste.</p></div>
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><div class="feat-name">Diff Preview</div><p class="feat-desc">Shows your staged diff in the panel so you can review it before generating. Syntax-highlighted by file type.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><div class="feat-name">Edit Before Commit</div><p class="feat-desc">The message is fully editable before committing. You have the final say — Claude just does the heavy lifting.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div><div class="feat-name">GTK4 Glass Window</div><p class="feat-desc">Floats above your editor in the Velo glass aesthetic. Dismiss with Escape when done — no terminal needed.</p></div>
+    </div>
+</section>
+
+<div class="divider"></div>
+<section class="section"><p class="section-eyebrow reveal">More from Velo</p><h2 class="section-title reveal d1">The Suite</h2><div class="more-grid">
+    <a class="more-card reveal" href="velo-bar.html"><div class="more-card-name">Velo Shell</div><div class="more-card-sub">Cockpit instrument bar</div></a>
+    <a class="more-card reveal d1" href="velo-browser.html"><div class="more-card-name">Velo Browser</div><div class="more-card-sub">WebKit cockpit browser</div></a>
+    <a class="more-card reveal d2" href="velo-launcher.html"><div class="more-card-name">Velo Launcher</div><div class="more-card-sub">Fuzzy app launcher</div></a>
+    <a class="more-card reveal d3" href="velo-paper.html"><div class="more-card-name">Velo Paper</div><div class="more-card-sub">Wallpaper switcher</div></a>
+    <a class="more-card reveal" href="velo-osd.html"><div class="more-card-name">Velo OSD</div><div class="more-card-sub">Volume overlay</div></a>
+    <a class="more-card reveal d1" href="velo-player.html"><div class="more-card-name">Velo Player</div><div class="more-card-sub">Spotify vinyl client</div></a>
+    <a class="more-card reveal d2" href="velo-files.html"><div class="more-card-name">Velo Files</div><div class="more-card-sub">Glass file manager</div></a>
+    <a class="more-card reveal d3" href="velo-assistant.html"><div class="more-card-name">Velo Assistant</div><div class="more-card-sub">Claude chat GUI</div></a>
+</div></section>
+
+<footer><div class="footer-brand">Velo Commit</div><div class="footer-text">GTK4 · Rust · Claude API · git</div></footer>
+
+<script>
+(function(){const el=document.getElementById('scroll-progress');window.addEventListener('scroll',()=>{const t=document.documentElement.scrollHeight-window.innerHeight;el.style.transform=`scaleX(${window.scrollY/t})`;},{passive:true});})();
+(function(){const io=new IntersectionObserver(e=>e.forEach(x=>{if(!x.isIntersecting)return;x.target.classList.add('in');io.unobserve(x.target);}),{threshold:0.08});document.querySelectorAll('.reveal').forEach(el=>io.observe(el));})();
+
+const MESSAGES=[
+    'feat(bar): add Bluetooth toggle with D-Bus BlueZ integration\n\nConnect bluetooth state to the bar pill via BlueZ D-Bus signals. Toggle\nactivates/deactivates the adapter and updates the pill colour in real time.',
+    'fix(osd): correct volume OSD dismiss timer on rapid input\n\nReset the 2.5s auto-dismiss timer on each new volume event to prevent the\nOSD from disappearing mid-scroll.',
+    'refactor(launcher): replace linear scan with fuzzy Smith-Waterman scorer\n\nImproves match quality for short queries and removes false positives from\nthe previous prefix-only approach.',
+];
+
+let generating=false,msgIdx=0;
+window.generateMsg=function(){
+    if(generating)return;
+    generating=true;
+    const msg=document.getElementById('cp-msg');
+    const btn=document.getElementById('commit-btn');
+    btn.disabled=true;
+    msg.innerHTML='';
+    const full=MESSAGES[msgIdx%MESSAGES.length];
+    msgIdx++;
+    let i=0;
+    const cursor='<span class="cursor"></span>';
+    const interval=setInterval(()=>{
+        i++;
+        msg.innerHTML=full.slice(0,i).replace(/\n/g,'<br>')+cursor;
+        if(i>=full.length){clearInterval(interval);generating=false;msg.innerHTML=full.replace(/\n/g,'<br>');btn.disabled=false;}
+    },18);
+};
+
+window.doCommit=function(){
+    const btn=document.getElementById('commit-btn');
+    btn.textContent='↳ Committed ✓';
+    btn.style.background='rgba(100,210,130,0.14)';
+    btn.disabled=true;
+    setTimeout(()=>{btn.textContent='↳ Commit';btn.style.background='';btn.disabled=false;},2200);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo Files — Glass File Manager</title>
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        :root{--accent:#8ab4d4;--bg:#09090c;--text:rgba(228,238,252,0.88);--text-sub:rgba(165,190,218,0.55);--border:rgba(195,215,240,0.09);--glass:linear-gradient(rgba(18,21,28,0.94),rgba(7,8,13,0.96))}
+        html{scroll-behavior:smooth}
+        body{background:var(--bg);color:var(--text);font-family:"Inter","SF Pro Display","Cantarell",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;opacity:0.028;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E")}
+        #scroll-progress{position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(80,140,190,0.6),rgba(138,180,212,0.9) 50%,rgba(170,215,245,1));transform-origin:left;transform:scaleX(0);z-index:9100;pointer-events:none;transition:transform 60ms linear}
+        .nav-wrap{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding:14px 24px;z-index:500;pointer-events:none}
+        nav{pointer-events:all;display:flex;align-items:center;padding:3px 5px;border-radius:999px;background:var(--glass);border:1px solid var(--border);box-shadow:inset 0 1px 0 rgba(174,206,236,0.09),inset 0 -1px 0 rgba(0,0,0,0.50),0 8px 32px rgba(0,0,0,0.65);position:relative}
+        nav::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.38) 50%,transparent)}
+        .nav-brand{font-size:9.5px;font-weight:700;letter-spacing:4.5px;color:rgba(138,180,212,0.48);padding:6px 16px 6px 12px;text-decoration:none;transition:color 160ms}
+        .nav-brand:hover{color:rgba(190,222,250,0.90)}
+        .nav-sep{width:1px;height:16px;background:rgba(195,215,240,0.07);margin:0 2px}
+        .nav-link,.nav-back{font-size:12.5px;font-weight:450;color:rgba(190,214,240,0.44);text-decoration:none;padding:5px 14px;border-radius:999px;transition:background 110ms,color 110ms;white-space:nowrap}
+        .nav-back{font-size:12px;color:rgba(138,180,212,0.38)}
+        .nav-link:hover,.nav-back:hover{background:rgba(138,180,212,0.10);color:rgba(228,242,255,0.90)}
+        .reveal{opacity:0;transform:translateY(24px)}.reveal.in{opacity:1;transform:none;transition:opacity 700ms cubic-bezier(0.22,1,0.36,1),transform 700ms cubic-bezier(0.22,1,0.36,1)}
+        .d1{transition-delay:90ms}.d2{transition-delay:180ms}.d3{transition-delay:270ms}
+        @keyframes heroUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+        .hero{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:110px 24px 80px;text-align:center;overflow:hidden}
+        .hero-glow{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);width:1000px;height:500px;background:radial-gradient(ellipse,rgba(138,180,212,0.065) 0%,transparent 65%);pointer-events:none}
+        .breadcrumb{font-size:11px;color:rgba(138,180,212,0.30);margin-bottom:18px;animation:heroUp 700ms 100ms cubic-bezier(0.22,1,0.36,1) both}
+        .breadcrumb a{color:rgba(138,180,212,0.42);text-decoration:none}
+        .hero-eyebrow{font-size:9px;font-weight:700;letter-spacing:5px;color:rgba(138,180,212,0.42);text-transform:uppercase;margin-bottom:22px;animation:heroUp 700ms 200ms cubic-bezier(0.22,1,0.36,1) both}
+        .hero-title{font-size:clamp(44px,7vw,88px);font-weight:750;line-height:1.0;letter-spacing:-2px;color:rgba(234,242,254,0.96);margin-bottom:22px;animation:heroUp 700ms 320ms cubic-bezier(0.22,1,0.36,1) both}
+        .hero-title em{font-style:normal;color:var(--accent)}
+        .hero-sub{font-size:15px;color:var(--text-sub);max-width:480px;line-height:1.75;margin-bottom:52px;animation:heroUp 700ms 440ms cubic-bezier(0.22,1,0.36,1) both}
+
+        /* Files mockup */
+        .files-wrap{width:100%;max-width:660px;animation:heroUp 700ms 560ms cubic-bezier(0.22,1,0.36,1) both}
+        .files-panel{background:linear-gradient(160deg,rgba(10,12,18,0.97),rgba(5,6,10,0.98));border:1px solid rgba(195,215,240,0.10);border-radius:20px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(174,206,236,0.07),0 32px 80px rgba(0,0,0,0.75),0 0 60px rgba(138,180,212,0.07);display:flex}
+        .files-sidebar{width:140px;border-right:1px solid rgba(195,215,240,0.07);padding:14px 10px;flex-shrink:0}
+        .fs-section{font-size:8.5px;font-weight:700;letter-spacing:2px;color:rgba(138,180,212,0.28);text-transform:uppercase;margin:10px 8px 6px;display:block}
+        .fs-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;font-size:12px;color:rgba(190,214,240,0.50);cursor:pointer;transition:background 110ms,color 110ms;user-select:none}
+        .fs-item:hover,.fs-item.active{background:rgba(138,180,212,0.08);color:rgba(220,234,252,0.80)}
+        .fs-icon{font-size:12px;opacity:0.70;flex-shrink:0}
+        .files-main{flex:1;min-width:0;display:flex;flex-direction:column}
+        .files-toolbar{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid rgba(195,215,240,0.06)}
+        .ft-path{flex:1;font-family:"JetBrains Mono","SF Mono",monospace;font-size:11px;color:rgba(138,180,212,0.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .ft-btn{background:none;border:1px solid rgba(195,215,240,0.07);border-radius:6px;padding:4px 8px;font-size:11px;color:rgba(150,182,214,0.38);cursor:pointer;transition:background 110ms,color 110ms;white-space:nowrap}
+        .ft-btn:hover{background:rgba(138,180,212,0.08);color:rgba(190,222,250,0.70)}
+        .ft-btn.active{background:rgba(138,180,212,0.10);border-color:rgba(138,180,212,0.18);color:rgba(190,222,250,0.75)}
+        .files-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:10px;overflow-y:auto;max-height:210px}
+        .file-item{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 6px;border-radius:10px;cursor:pointer;transition:background 110ms;user-select:none;border:1px solid transparent}
+        .file-item:hover{background:rgba(138,180,212,0.06)}
+        .file-item.selected{background:rgba(138,180,212,0.10);border-color:rgba(138,180,212,0.18)}
+        .file-icon{font-size:22px;line-height:1}
+        .file-name{font-size:10px;color:rgba(190,214,240,0.52);text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .files-status{padding:8px 12px;border-top:1px solid rgba(195,215,240,0.06);font-size:10.5px;color:rgba(138,180,212,0.28);display:flex;justify-content:space-between}
+
+        .section{padding:90px 24px;max-width:1080px;margin:0 auto}
+        .section-eyebrow{font-size:9px;font-weight:700;letter-spacing:4px;color:rgba(138,180,212,0.36);text-transform:uppercase;text-align:center;margin-bottom:12px}
+        .section-title{font-size:clamp(24px,3.2vw,38px);font-weight:650;color:rgba(234,242,254,0.93);text-align:center;letter-spacing:-0.5px;margin-bottom:56px}
+        .divider{width:100%;max-width:1080px;margin:0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.12) 30%,rgba(138,180,212,0.12) 70%,transparent)}
+        .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        @media(max-width:820px){.feature-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:520px){.feature-grid{grid-template-columns:1fr}}
+        .feat-card{background:linear-gradient(160deg,rgba(14,17,24,0.95),rgba(7,8,14,0.97));border:1px solid rgba(195,215,240,0.085);border-radius:18px;padding:26px;box-shadow:inset 0 1px 0 rgba(174,206,236,0.07),0 12px 36px rgba(0,0,0,0.45)}
+        .feat-icon{width:40px;height:40px;border-radius:12px;background:rgba(138,180,212,0.07);border:1px solid rgba(138,180,212,0.13);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+        .feat-icon svg{width:18px;height:18px;fill:none;stroke:rgba(138,180,212,0.70);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+        .feat-name{font-size:16px;font-weight:640;color:rgba(234,242,254,0.92);letter-spacing:-0.2px;margin-bottom:8px}
+        .feat-desc{font-size:13px;color:rgba(165,190,218,0.52);line-height:1.70}
+        .more-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+        @media(max-width:700px){.more-grid{grid-template-columns:repeat(2,1fr)}}
+        .more-card{background:linear-gradient(160deg,rgba(14,17,24,0.95),rgba(7,8,14,0.97));border:1px solid rgba(195,215,240,0.07);border-radius:14px;padding:16px 18px;text-decoration:none;display:block;transition:border-color 150ms,transform 180ms}
+        .more-card:hover{border-color:rgba(138,180,212,0.16);transform:translateY(-2px)}
+        .more-card-name{font-size:13.5px;font-weight:600;color:rgba(220,232,250,0.80);margin-bottom:4px}
+        .more-card-sub{font-size:11px;color:rgba(138,180,212,0.34)}
+        footer{border-top:1px solid rgba(195,215,240,0.05);padding:50px 24px;text-align:center}
+        .footer-brand{font-size:9px;font-weight:700;letter-spacing:5px;color:rgba(138,180,212,0.26);text-transform:uppercase;margin-bottom:8px}
+        .footer-text{font-size:11px;color:rgba(150,182,214,0.18)}
+    </style>
+</head>
+<body>
+<div id="scroll-progress"></div>
+<div class="nav-wrap"><nav>
+    <a class="nav-brand" href="index.html">VELO</a>
+    <div class="nav-sep"></div>
+    <a class="nav-back" href="index.html#suite">← Suite</a>
+    <a class="nav-link" href="velo-bar.html">Shell</a>
+    <a class="nav-link" href="index.html#install">Install</a>
+</nav></div>
+
+<section class="hero">
+    <div class="hero-glow"></div>
+    <p class="breadcrumb"><a href="index.html">Velo</a> / Files</p>
+    <p class="hero-eyebrow">File Manager</p>
+    <h1 class="hero-title">Navigate your<br><em>filesystem in glass.</em></h1>
+    <p class="hero-sub">A file manager built in the same design language. Bookmark sidebar, grid and list views, inline info panel, context menus and keyboard-first navigation.</p>
+
+    <div class="files-wrap">
+        <div class="files-panel">
+            <div class="files-sidebar">
+                <span class="fs-section">Places</span>
+                <div class="fs-item active"><span class="fs-icon">🏠</span>Home</div>
+                <div class="fs-item"><span class="fs-icon">📂</span>Documents</div>
+                <div class="fs-item"><span class="fs-icon">⬇</span>Downloads</div>
+                <div class="fs-item"><span class="fs-icon">🖼</span>Pictures</div>
+                <div class="fs-item"><span class="fs-icon">🎵</span>Music</div>
+                <span class="fs-section">Bookmarks</span>
+                <div class="fs-item"><span class="fs-icon">⭐</span>Projects</div>
+                <div class="fs-item"><span class="fs-icon">⭐</span>velo-de</div>
+            </div>
+            <div class="files-main">
+                <div class="files-toolbar">
+                    <button class="ft-btn" onclick="navigate('←')">←</button>
+                    <button class="ft-btn" onclick="navigate('→')">→</button>
+                    <span class="ft-path" id="ft-path">~/Documents/velo-de</span>
+                    <button class="ft-btn active" id="view-btn" onclick="toggleView()">⊞</button>
+                </div>
+                <div class="files-grid" id="files-grid"></div>
+                <div class="files-status">
+                    <span id="fs-count">14 items</span>
+                    <span id="fs-size">2.4 GB free</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+<section class="section">
+    <p class="section-eyebrow reveal">Features</p>
+    <h2 class="section-title reveal d1">Files should feel this good</h2>
+    <div class="feature-grid">
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div><div class="feat-name">Grid &amp; List</div><p class="feat-desc">Toggle between icon grid and compact list view. Zoom the grid from S to XL thumbnails with Ctrl+scroll.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></div><div class="feat-name">Bookmarks</div><p class="feat-desc">Drag any folder to the sidebar to bookmark it. Star any item for quick access. Synced to XDG bookmarks.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="feat-name">Info Panel</div><p class="feat-desc">Select a file and the info panel slides in: dimensions, size, permissions, EXIF for images, git status.</p></div>
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><div class="feat-name">Context Menu</div><p class="feat-desc">Right-click for copy, move, link, compress, open-with, share and open-in-terminal. Extensible with custom scripts.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M8 4v16M8 4l-5 5M8 4l5 5"/></svg></div><div class="feat-name">Keyboard Nav</div><p class="feat-desc">Arrow keys navigate. Enter opens. Backspace goes up. / starts fuzzy search. All without touching the mouse.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg></div><div class="feat-name">Trash &amp; Undo</div><p class="feat-desc">Moves to XDG trash. Ctrl+Z undoes the last file operation. No accidental permanent deletes.</p></div>
+    </div>
+</section>
+
+<div class="divider"></div>
+<section class="section"><p class="section-eyebrow reveal">More from Velo</p><h2 class="section-title reveal d1">The Suite</h2><div class="more-grid">
+    <a class="more-card reveal" href="velo-bar.html"><div class="more-card-name">Velo Shell</div><div class="more-card-sub">Cockpit instrument bar</div></a>
+    <a class="more-card reveal d1" href="velo-browser.html"><div class="more-card-name">Velo Browser</div><div class="more-card-sub">WebKit cockpit browser</div></a>
+    <a class="more-card reveal d2" href="velo-launcher.html"><div class="more-card-name">Velo Launcher</div><div class="more-card-sub">Fuzzy app launcher</div></a>
+    <a class="more-card reveal d3" href="velo-paper.html"><div class="more-card-name">Velo Paper</div><div class="more-card-sub">Wallpaper switcher</div></a>
+    <a class="more-card reveal" href="velo-osd.html"><div class="more-card-name">Velo OSD</div><div class="more-card-sub">Volume overlay</div></a>
+    <a class="more-card reveal d1" href="velo-player.html"><div class="more-card-name">Velo Player</div><div class="more-card-sub">Spotify vinyl client</div></a>
+    <a class="more-card reveal d2" href="velo-commit.html"><div class="more-card-name">Velo Commit</div><div class="more-card-sub">AI git tool</div></a>
+    <a class="more-card reveal d3" href="velo-assistant.html"><div class="more-card-name">Velo Assistant</div><div class="more-card-sub">Claude chat GUI</div></a>
+</div></section>
+
+<footer><div class="footer-brand">Velo Files</div><div class="footer-text">GTK4 · Rust · GIO · Wayland</div></footer>
+
+<script>
+(function(){const el=document.getElementById('scroll-progress');window.addEventListener('scroll',()=>{const t=document.documentElement.scrollHeight-window.innerHeight;el.style.transform=`scaleX(${window.scrollY/t})`;},{passive:true});})();
+(function(){const io=new IntersectionObserver(e=>e.forEach(x=>{if(!x.isIntersecting)return;x.target.classList.add('in');io.unobserve(x.target);}),{threshold:0.08});document.querySelectorAll('.reveal').forEach(el=>io.observe(el));})();
+
+const DIRS=[
+    {path:'~/Documents/velo-de',items:[
+        {icon:'📁',name:'src'},{icon:'📁',name:'assets'},{icon:'📁',name:'.git'},
+        {icon:'📄',name:'Cargo.toml'},{icon:'📄',name:'install.sh'},{icon:'📄',name:'README.md'},
+        {icon:'📄',name:'LICENSE'},{icon:'🦀',name:'main.rs'},{icon:'🦀',name:'config.rs'},
+        {icon:'🦀',name:'bar.rs'},{icon:'🦀',name:'osd.rs'},{icon:'🦀',name:'launcher.rs'},
+        {icon:'📝',name:'CHANGELOG'},{icon:'⚙',name:'.env'},
+    ]},
+    {path:'~/Documents',items:[
+        {icon:'📁',name:'velo-de'},{icon:'📁',name:'notes'},{icon:'📁',name:'projects'},
+        {icon:'📄',name:'ideas.md'},{icon:'📄',name:'todo.txt'},
+    ]},
+    {path:'~',items:[
+        {icon:'📁',name:'Documents'},{icon:'📁',name:'Downloads'},{icon:'📁',name:'Pictures'},
+        {icon:'📁',name:'Music'},{icon:'📁',name:'.config'},{icon:'📁',name:'.local'},
+    ]},
+];
+
+let dirIdx=0,selected=null,isGrid=true;
+function render(){
+    const dir=DIRS[dirIdx];
+    document.getElementById('ft-path').textContent=dir.path;
+    document.getElementById('fs-count').textContent=dir.items.length+' items';
+    const grid=document.getElementById('files-grid');
+    grid.innerHTML=dir.items.map((f,i)=>`<div class="file-item${i===selected?' selected':''}" onclick="selectFile(${i})" ondblclick="openItem(${i})"><span class="file-icon">${f.icon}</span><span class="file-name">${f.name}</span></div>`).join('');
+}
+window.selectFile=function(i){selected=i;render();};
+window.openItem=function(i){const item=DIRS[dirIdx].items[i];if(item.icon==='📁'){const next=DIRS.findIndex(d=>d.path.endsWith(item.name));if(next>=0){dirIdx=next;selected=null;render();}}};
+window.navigate=function(dir){if(dir==='←'&&dirIdx<DIRS.length-1){dirIdx++;selected=null;render();}else if(dir==='→'&&dirIdx>0){dirIdx--;selected=null;render();}};
+window.toggleView=function(){isGrid=!isGrid;const btn=document.getElementById('view-btn');btn.textContent=isGrid?'⊞':'☰';const grid=document.getElementById('files-grid');grid.style.gridTemplateColumns=isGrid?'repeat(4,1fr)':'1fr';render();};
+render();
+</script>
+</body>
+</html>

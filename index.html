@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo — Precision Linux Suite</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --accent:     #8ab4d4;
+            --bg:         #09090c;
+            --bg-deep:    #06060a;
+            --text:       rgba(228, 238, 252, 0.88);
+            --text-sub:   rgba(165, 190, 218, 0.55);
+            --text-faint: rgba(185, 210, 235, 0.36);
+            --border:     rgba(195, 215, 240, 0.09);
+            --glass:      linear-gradient(rgba(18,21,28,0.94), rgba(7,8,13,0.96));
+        }
+
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Inter","SF Pro Display","Cantarell",system-ui,sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 9000; opacity: 0.028;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        /* ── Scroll progress ─────────────────────────────────────────── */
+        #scroll-progress {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg,
+                rgba(80,140,190,0.6),
+                rgba(138,180,212,0.9) 50%,
+                rgba(170,215,245,1));
+            transform-origin: left;
+            transform: scaleX(0);
+            z-index: 9100;
+            pointer-events: none;
+            transition: transform 60ms linear;
+        }
+
+        /* ── Nav ──────────────────────────────────────────────────────── */
+        .nav-wrap {
+            position: fixed; top: 0; left: 0; right: 0;
+            display: flex; justify-content: center;
+            padding: 14px 24px; z-index: 500; pointer-events: none;
+        }
+        nav {
+            pointer-events: all;
+            display: flex; align-items: center;
+            padding: 3px 5px; border-radius: 999px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            box-shadow:
+                inset 0 1px 0 rgba(174,206,236,0.09),
+                inset 0 -1px 0 rgba(0,0,0,0.50),
+                0 8px 32px rgba(0,0,0,0.65),
+                0 0 40px rgba(138,180,212,0.05);
+            position: relative;
+        }
+        nav::before {
+            content: '';
+            position: absolute; top: 0; left: 15%; right: 15%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(138,180,212,0.38) 50%, transparent);
+        }
+        .nav-brand {
+            font-size: 9.5px; font-weight: 700; letter-spacing: 4.5px;
+            color: rgba(138,180,212,0.48);
+            padding: 6px 16px 6px 12px; text-decoration: none;
+            transition: color 160ms ease, text-shadow 160ms ease;
+        }
+        .nav-brand:hover {
+            color: rgba(190,222,250,0.90);
+            text-shadow: 0 0 18px rgba(138,180,212,0.50);
+        }
+        .nav-sep { width: 1px; height: 16px; background: rgba(195,215,240,0.07); margin: 0 2px; flex-shrink: 0; }
+        .nav-link {
+            font-size: 12.5px; font-weight: 450;
+            color: rgba(190,214,240,0.44); text-decoration: none;
+            padding: 5px 14px; border-radius: 999px; letter-spacing: 0.2px;
+            transition: background-color 110ms ease, color 110ms ease; white-space: nowrap;
+        }
+        .nav-link:hover { background: rgba(138,180,212,0.10); color: rgba(228,242,255,0.90); }
+
+        /* ── Scroll reveal ───────────────────────────────────────────── */
+        .reveal        { opacity: 0; transform: translateY(26px); }
+        .reveal-left   { opacity: 0; transform: translateX(-30px); }
+        .reveal-right  { opacity: 0; transform: translateX(30px); }
+        .reveal.in, .reveal-left.in, .reveal-right.in {
+            opacity: 1; transform: none;
+            transition: opacity 700ms cubic-bezier(0.22,1,0.36,1),
+                        transform 700ms cubic-bezier(0.22,1,0.36,1);
+        }
+        .d1 { transition-delay: 90ms; }
+        .d2 { transition-delay: 180ms; }
+        .d3 { transition-delay: 270ms; }
+        .d4 { transition-delay: 360ms; }
+        .d5 { transition-delay: 450ms; }
+
+        /* ── Hero ─────────────────────────────────────────────────────── */
+        .hero {
+            min-height: 100svh; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            position: relative; padding: 110px 24px 80px;
+            text-align: center; overflow: hidden;
+        }
+        .hero-glow {
+            position: absolute; top: 40%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1000px; height: 500px;
+            background: radial-gradient(ellipse, rgba(138,180,212,0.065) 0%, transparent 65%);
+            pointer-events: none; will-change: transform;
+        }
+        .hero-eyebrow {
+            font-size: 9px; font-weight: 700; letter-spacing: 5px;
+            color: rgba(138,180,212,0.42); text-transform: uppercase;
+            margin-bottom: 22px;
+            animation: heroUp 800ms 200ms cubic-bezier(0.22,1,0.36,1) both;
+        }
+        .hero-title {
+            font-size: clamp(50px,8vw,96px); font-weight: 750;
+            line-height: 1.0; letter-spacing: -2.5px;
+            color: rgba(234,242,254,0.96); margin-bottom: 22px;
+            animation: heroUp 800ms 340ms cubic-bezier(0.22,1,0.36,1) both;
+        }
+        .hero-title em { font-style: normal; color: var(--accent); }
+        .hero-sub {
+            font-size: 15px; color: var(--text-sub);
+            max-width: 440px; line-height: 1.75; margin-bottom: 40px;
+            animation: heroUp 800ms 480ms cubic-bezier(0.22,1,0.36,1) both;
+        }
+        @keyframes heroUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* ── Hero cockpit preview strip ──────────────────────────────── */
+        .cockpit-strip {
+            display: flex; gap: 7px; flex-wrap: wrap; justify-content: center;
+            margin-bottom: 44px;
+            animation: heroUp 800ms 600ms cubic-bezier(0.22,1,0.36,1) both;
+        }
+        .cpill {
+            display: flex; align-items: center; gap: 6px;
+            padding: 5px 14px; min-height: 32px; border-radius: 10px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            box-shadow:
+                inset 0 1px 0 rgba(174,206,236,0.07),
+                inset 0 -1px 0 rgba(0,0,0,0.35),
+                0 4px 14px rgba(0,0,0,0.45);
+            font-size: 11.5px; color: rgba(220,232,250,0.75);
+            white-space: nowrap; user-select: none;
+        }
+        .cpill-icon { color: rgba(138,180,212,0.55); font-size: 12px; line-height: 1; }
+        .cpill-dim  { font-size: 10px; color: rgba(150,182,214,0.32); }
+        .cpill-label { font-size: 7px; font-weight: 700; letter-spacing: 1.8px; color: rgba(138,166,198,0.33); display: block; line-height: 1; }
+        .cpill-time { font-size: 13px; font-weight: 650; letter-spacing: 0.6px; color: rgba(234,242,254,0.94); font-variant-numeric: tabular-nums; }
+
+        /* ── Soundwave ───────────────────────────────────────────────── */
+        .wave-wrap { width: 100%; max-width: 760px; position: relative; animation: heroUp 800ms 700ms cubic-bezier(0.22,1,0.36,1) both; }
+        #soundwave { display: block; width: 100%; height: 130px; cursor: crosshair; }
+        .wave-hint { font-size: 9px; letter-spacing: 2.5px; color: rgba(138,180,212,0.22); text-transform: uppercase; text-align: center; margin-top: 10px; }
+
+        /* ── Hero actions ────────────────────────────────────────────── */
+        .hero-actions {
+            margin-top: 48px; display: flex; gap: 10px;
+            flex-wrap: wrap; justify-content: center;
+            animation: heroUp 800ms 800ms cubic-bezier(0.22,1,0.36,1) both;
+        }
+        .btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 10px 24px; border-radius: 999px;
+            font-family: inherit; font-size: 13px; font-weight: 500;
+            cursor: pointer; text-decoration: none;
+            border: 1px solid transparent; transition: all 150ms ease; letter-spacing: 0.2px;
+        }
+        .btn svg { flex-shrink: 0; }
+        .btn-accent {
+            background: rgba(138,180,212,0.13); border-color: rgba(138,180,212,0.32);
+            color: rgba(228,242,255,0.93); box-shadow: 0 0 22px rgba(138,180,212,0.10);
+        }
+        .btn-accent:hover { background: rgba(138,180,212,0.22); box-shadow: 0 0 32px rgba(138,180,212,0.22); }
+        .btn-ghost { background: transparent; border-color: rgba(195,215,240,0.09); color: rgba(190,214,240,0.50); }
+        .btn-ghost:hover { background: rgba(174,206,236,0.06); color: rgba(220,234,252,0.78); }
+
+        /* ── Divider ─────────────────────────────────────────────────── */
+        .divider {
+            width: 100%; max-width: 1120px; margin: 0 auto;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(138,180,212,0.12) 30%, rgba(138,180,212,0.12) 70%, transparent);
+        }
+
+        /* ── Section wrapper ─────────────────────────────────────────── */
+        .section { padding: 100px 24px; max-width: 1120px; margin: 0 auto; }
+        .section-eyebrow {
+            font-size: 9px; font-weight: 700; letter-spacing: 4px;
+            color: rgba(138,180,212,0.36); text-transform: uppercase;
+            text-align: center; margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: clamp(26px,3.5vw,40px); font-weight: 650;
+            color: rgba(234,242,254,0.93); text-align: center;
+            letter-spacing: -0.5px; margin-bottom: 16px;
+        }
+        .section-sub {
+            font-size: 14px; color: var(--text-sub);
+            text-align: center; max-width: 500px;
+            margin: 0 auto 56px; line-height: 1.75;
+        }
+
+        /* ── Install terminal ────────────────────────────────────────── */
+        .terminal-card {
+            background: linear-gradient(160deg, rgba(8,10,16,0.98), rgba(5,6,10,0.99));
+            border: 1px solid rgba(195,215,240,0.09); border-radius: 20px; overflow: hidden;
+            box-shadow:
+                inset 0 1px 0 rgba(174,206,236,0.07),
+                0 28px 70px rgba(0,0,0,0.72),
+                0 0 60px rgba(138,180,212,0.055);
+        }
+        .t-titlebar {
+            display: flex; align-items: center; gap: 7px;
+            padding: 13px 20px; border-bottom: 1px solid rgba(195,215,240,0.055);
+        }
+        .t-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .t-dot-r { background: rgba(255,95,87,0.52); }
+        .t-dot-y { background: rgba(255,189,46,0.52); }
+        .t-dot-g { background: rgba(40,200,64,0.52); }
+        .t-title-label { margin-left: auto; font-size: 11px; color: rgba(150,182,214,0.26); letter-spacing: 0.5px; }
+        .t-body { padding: 24px 28px; font-family: "JetBrains Mono","Fira Code","Cascadia Code","SF Mono",monospace; }
+        .t-line { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+        .t-line:last-child { margin-bottom: 0; }
+        .t-prompt { color: rgba(138,180,212,0.50); user-select: none; flex-shrink: 0; font-size: 13px; }
+        .t-cmd { color: rgba(228,242,255,0.83); font-size: 13px; }
+        .t-arg { color: rgba(170,210,240,0.72); }
+        .t-comment { color: rgba(138,180,212,0.32); font-size: 12px; }
+        .t-ok { color: rgba(100,210,130,0.75); font-size: 13px; flex-shrink: 0; }
+        .t-output { padding-left: 22px; }
+        .copy-btn {
+            margin-left: auto; background: rgba(138,180,212,0.07);
+            border: 1px solid rgba(138,180,212,0.14); border-radius: 6px;
+            color: rgba(150,182,214,0.46); font-size: 11px; padding: 3px 10px;
+            cursor: pointer; font-family: inherit; white-space: nowrap;
+            transition: all 130ms ease;
+        }
+        .copy-btn:hover { background: rgba(138,180,212,0.14); color: rgba(200,225,248,0.85); }
+        .copy-btn.copied { color: rgba(100,210,130,0.80); border-color: rgba(100,210,130,0.22); background: rgba(100,210,130,0.07); }
+
+        .install-checklist {
+            display: grid; grid-template-columns: repeat(3,1fr);
+            border-top: 1px solid rgba(195,215,240,0.055);
+        }
+        @media (max-width: 580px) { .install-checklist { grid-template-columns: 1fr; } }
+        @media (max-width: 780px) { .install-checklist { grid-template-columns: repeat(2,1fr); } }
+        .ic-item {
+            display: flex; align-items: center; gap: 11px;
+            padding: 13px 22px;
+            border-right: 1px solid rgba(195,215,240,0.05);
+            border-bottom: 1px solid rgba(195,215,240,0.05);
+        }
+        .ic-item:nth-child(3n) { border-right: none; }
+        @media (max-width: 780px) { .ic-item:nth-child(3n) { border-right: 1px solid rgba(195,215,240,0.05); } .ic-item:nth-child(2n) { border-right: none; } }
+        .ic-icon {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: rgba(138,180,212,0.07); border: 1px solid rgba(138,180,212,0.16);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .ic-icon svg { width: 10px; height: 10px; stroke: rgba(138,180,212,0.65); stroke-width: 2.2; fill: none; }
+        .ic-name { font-size: 12.5px; color: rgba(190,214,240,0.52); }
+
+        .req-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 28px; justify-content: center; }
+        .req-tag {
+            font-size: 11px; color: rgba(150,182,214,0.38);
+            background: rgba(138,180,212,0.04); border: 1px solid rgba(138,180,212,0.08);
+            border-radius: 999px; padding: 4px 14px;
+        }
+
+        /* ── Apps grid ───────────────────────────────────────────────── */
+        .apps-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+        @media (max-width: 920px) { .apps-grid { grid-template-columns: repeat(2,1fr); } }
+        @media (max-width: 580px) { .apps-grid { grid-template-columns: 1fr; } }
+
+        /* ── Card ─────────────────────────────────────────────────────── */
+        .card {
+            border-radius: 20px;
+            background: linear-gradient(160deg, rgba(14,17,24,0.95), rgba(7,8,14,0.97));
+            border: 1px solid rgba(195,215,240,0.085);
+            box-shadow:
+                inset 0 1px 0 rgba(174,206,236,0.08),
+                inset 0 -1px 0 rgba(0,0,0,0.40),
+                0 12px 40px rgba(0,0,0,0.50),
+                0 0 24px rgba(138,180,212,0.04);
+            padding: 28px; position: relative; overflow: hidden;
+            opacity: 0; transform: translateY(20px);
+            text-decoration: none; display: block;
+        }
+        .card.in { animation: cardIn 560ms cubic-bezier(0.22,1.0,0.36,1.0) forwards; }
+        @keyframes cardIn { to { opacity: 1; transform: none; } }
+        .card::after {
+            content: ''; position: absolute; top: 0; left: 12%; right: 12%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(138,180,212,0.45), transparent);
+            opacity: 0; transition: opacity 200ms ease;
+        }
+        .card.in:hover { border-color: rgba(138,180,212,0.18); box-shadow: inset 0 1px 0 rgba(174,206,236,0.12), inset 0 -1px 0 rgba(0,0,0,0.40), 0 24px 64px rgba(0,0,0,0.70), 0 0 60px rgba(138,180,212,0.09); transform: translateY(-3px); transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease; }
+        .card.in:hover::after { opacity: 1; }
+
+        /* Featured shell card */
+        .card-featured { grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1.15fr; gap: 52px; align-items: center; padding: 44px 48px; }
+        @media (max-width: 720px) { .card-featured { grid-template-columns: 1fr; gap: 36px; padding: 30px 28px; } }
+        .card.in.card-featured:hover { transform: none; }
+
+        .card-eyebrow { font-size: 8.5px; font-weight: 700; letter-spacing: 3px; color: rgba(138,180,212,0.38); text-transform: uppercase; margin-bottom: 7px; }
+        .card-icon { width: 46px; height: 46px; border-radius: 13px; background: rgba(138,180,212,0.07); border: 1px solid rgba(138,180,212,0.14); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; transition: background 200ms, box-shadow 200ms; }
+        .card.in:hover .card-icon { background: rgba(138,180,212,0.13); box-shadow: 0 0 20px rgba(138,180,212,0.14); }
+        .card-icon svg { width: 21px; height: 21px; fill: none; stroke: rgba(138,180,212,0.72); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+        .card-icon svg .filled { fill: rgba(138,180,212,0.72); stroke: none; }
+        .card-name { font-size: 19px; font-weight: 650; color: rgba(234,242,254,0.94); letter-spacing: -0.3px; margin-bottom: 10px; }
+        .card-desc { font-size: 13px; color: rgba(165,190,218,0.54); line-height: 1.72; }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 20px; }
+        .chip { font-size: 10.5px; color: rgba(150,182,214,0.46); background: rgba(138,180,212,0.055); border: 1px solid rgba(138,180,212,0.10); border-radius: 999px; padding: 3px 11px; }
+
+        .card-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 650; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(206,147,80,0.52); background: rgba(206,140,60,0.055); border: 1px solid rgba(206,140,60,0.11); border-radius: 999px; padding: 2px 10px; margin-top: 16px; }
+
+        .card-link {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 11px; color: rgba(138,180,212,0.40); text-decoration: none;
+            margin-top: 22px; letter-spacing: 0.4px;
+            padding: 3px 0; border-bottom: 1px solid rgba(138,180,212,0.14);
+            transition: color 150ms, border-color 150ms;
+        }
+        .card-link:hover { color: rgba(190,222,250,0.80); border-color: rgba(138,180,212,0.40); }
+
+        /* ── Bar demo (cockpit interactive) ──────────────────────────── */
+        .bar-demo { display: flex; flex-direction: column; gap: 10px; align-items: center; filter: drop-shadow(0 0 30px rgba(138,180,212,0.06)); }
+        .bar-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+        .pill {
+            display: flex; align-items: center; gap: 7px;
+            padding: 6px 14px; min-height: 36px; border-radius: 12px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            box-shadow:
+                inset 0 1px 0 rgba(174,206,236,0.09),
+                inset 0 -1px 0 rgba(0,0,0,0.45),
+                0 5px 18px rgba(0,0,0,0.50);
+            font-size: 12px; color: rgba(220,232,250,0.78);
+            white-space: nowrap; user-select: none;
+            position: relative;
+        }
+        .pill-btn { cursor: pointer; transition: border-color 150ms, box-shadow 150ms; }
+        .pill-btn:hover { border-color: rgba(138,180,212,0.18); box-shadow: inset 0 1px 0 rgba(174,206,236,0.12), inset 0 -1px 0 rgba(0,0,0,0.45), 0 5px 18px rgba(0,0,0,0.50), 0 0 16px rgba(138,180,212,0.08); }
+        .pill-btn.active { border-color: rgba(138,180,212,0.28); box-shadow: inset 0 1px 0 rgba(174,206,236,0.12), inset 0 -1px 0 rgba(0,0,0,0.45), 0 5px 18px rgba(0,0,0,0.50), 0 0 20px rgba(138,180,212,0.14); }
+        .pill-icon { color: rgba(138,180,212,0.58); font-size: 13px; line-height: 1; }
+        .pill-dim  { font-size: 10.5px; color: rgba(150,182,214,0.35); }
+        .stat-label { font-size: 7.5px; font-weight: 700; letter-spacing: 2px; color: rgba(138,166,198,0.36); }
+        .clock-time { font-size: 14px; font-weight: 650; letter-spacing: 0.6px; color: rgba(234,242,254,0.96); font-variant-numeric: tabular-nums; }
+        .clock-date { font-size: 11px; color: rgba(150,182,214,0.42); letter-spacing: 0.2px; }
+
+        /* Popups */
+        .pill-popup {
+            position: absolute; bottom: calc(100% + 10px); left: 50%;
+            transform: translateX(-50%) translateY(6px);
+            background: linear-gradient(rgba(12,15,21,0.99), rgba(6,7,12,0.99));
+            border: 1px solid rgba(195,215,240,0.12);
+            border-radius: 14px; padding: 10px 12px;
+            min-width: 150px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.80), inset 0 1px 0 rgba(174,206,236,0.07), 0 0 24px rgba(138,180,212,0.06);
+            opacity: 0; pointer-events: none;
+            transition: opacity 150ms ease, transform 150ms ease;
+            z-index: 20;
+        }
+        .pill-popup.open { opacity: 1; pointer-events: all; transform: translateX(-50%) translateY(0); }
+        .popup-item { font-size: 12px; color: rgba(190,214,240,0.60); padding: 6px 10px; border-radius: 8px; cursor: pointer; transition: background 120ms, color 120ms; white-space: nowrap; }
+        .popup-item:hover { background: rgba(138,180,212,0.09); color: rgba(228,242,255,0.88); }
+        .popup-item-dim { color: rgba(150,182,214,0.38); border-top: 1px solid rgba(195,215,240,0.07); margin-top: 4px; padding-top: 10px; }
+        .popup-stat { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 5px 8px; font-size: 11.5px; color: rgba(220,232,250,0.70); }
+        .popup-stat-label { font-size: 9.5px; color: rgba(138,180,212,0.38); letter-spacing: 0.5px; }
+        .vol-slider-wrap { padding: 6px 8px; }
+        input[type=range].vol-slider {
+            -webkit-appearance: none; width: 130px; height: 3px;
+            border-radius: 2px; background: rgba(138,180,212,0.14);
+            outline: none; cursor: pointer; display: block;
+        }
+        input[type=range].vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 14px; height: 14px;
+            border-radius: 50%; background: rgba(138,180,212,0.85);
+            cursor: pointer; box-shadow: 0 0 8px rgba(138,180,212,0.45);
+        }
+
+        /* ── OSD card demo ───────────────────────────────────────────── */
+        .osd-demo { margin-top: 22px; padding: 15px 20px; border-radius: 16px; background: linear-gradient(rgba(14,17,24,0.94), rgba(7,8,14,0.96)); border: 1px solid rgba(195,215,240,0.09); box-shadow: inset 0 1px 0 rgba(174,206,236,0.08), 0 10px 36px rgba(0,0,0,0.55), 0 0 28px rgba(138,180,212,0.07); display: flex; align-items: center; gap: 15px; }
+        .osd-icon { font-size: 20px; color: rgba(138,180,212,0.78); flex-shrink: 0; line-height: 1; }
+        .osd-body { flex: 1; }
+        .osd-track { height: 5px; border-radius: 3px; background: rgba(174,206,236,0.08); border: 1px solid rgba(195,215,240,0.06); overflow: hidden; margin-bottom: 5px; }
+        .osd-fill { height: 100%; border-radius: 3px; background: linear-gradient(to right, rgba(100,160,205,0.55), rgba(138,180,212,0.82), rgba(160,200,230,0.92)); box-shadow: 0 0 10px rgba(138,180,212,0.42), 0 0 4px rgba(138,180,212,0.60); width: 72%; transition: width 120ms ease; }
+        .osd-val { font-size: 11px; font-weight: 550; color: rgba(190,214,240,0.50); text-align: right; font-variant-numeric: tabular-nums; }
+
+        /* ── Footer ──────────────────────────────────────────────────── */
+        footer { border-top: 1px solid rgba(195,215,240,0.05); padding: 60px 24px; text-align: center; }
+        .footer-brand { font-size: 9px; font-weight: 700; letter-spacing: 5px; color: rgba(138,180,212,0.28); text-transform: uppercase; margin-bottom: 10px; }
+        .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+        .footer-link { font-size: 12px; color: rgba(150,182,214,0.24); text-decoration: none; transition: color 150ms; }
+        .footer-link:hover { color: rgba(150,182,214,0.55); }
+        .footer-text { font-size: 11.5px; color: rgba(150,182,214,0.18); letter-spacing: 0.2px; }
+    </style>
+</head>
+<body>
+
+<div id="scroll-progress"></div>
+
+<!-- ── Nav ────────────────────────────────────────────────────────────── -->
+<div class="nav-wrap">
+    <nav>
+        <a class="nav-brand" href="#">VELO</a>
+        <div class="nav-sep"></div>
+        <a class="nav-link" href="#install">Install</a>
+        <a class="nav-link" href="#suite">Suite</a>
+        <a class="nav-link" href="velo-bar.html">Shell</a>
+        <a class="nav-link" href="#osd">OSD</a>
+        <a class="nav-link" href="#ai">AI</a>
+    </nav>
+</div>
+
+<!-- ── Hero ───────────────────────────────────────────────────────────── -->
+<section class="hero" id="hero">
+    <div class="hero-glow" id="hero-glow"></div>
+    <p class="hero-eyebrow">Precision Linux Suite</p>
+    <h1 class="hero-title">Machined glass<br>for <em>Wayland</em></h1>
+    <p class="hero-sub">Nine GTK4 tools. One design language. Built in Rust for Niri. Deep black. Steel blue. Every pixel deliberate.</p>
+
+    <!-- Live cockpit strip preview -->
+    <div class="cockpit-strip" id="cockpit-strip">
+        <div class="cpill"><span class="cpill-icon">⏻</span></div>
+        <div class="cpill">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                <span class="cpill-label">CPU</span>
+                <span id="prev-cpu" style="font-size:11.5px">12%</span>
+            </div>
+            <span class="cpill-dim">/</span>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                <span class="cpill-label">RAM</span>
+                <span id="prev-ram" style="font-size:11.5px">4.1G</span>
+            </div>
+        </div>
+        <div class="cpill" style="gap:10px">
+            <div style="text-align:center">
+                <div class="cpill-time" id="prev-time">--:--</div>
+            </div>
+        </div>
+        <div class="cpill"><span class="cpill-icon">▴</span><span>WiFi</span><span class="cpill-dim">5G</span></div>
+        <div class="cpill"><span class="cpill-icon">♪</span><span id="prev-vol">72%</span></div>
+        <div class="cpill"><span class="cpill-icon" style="font-size:10px">⬡</span><span>84%</span><span class="cpill-dim">↑</span></div>
+    </div>
+
+    <div class="wave-wrap">
+        <canvas id="soundwave"></canvas>
+        <p class="wave-hint">Move · Click to pulse</p>
+    </div>
+
+    <div class="hero-actions">
+        <a class="btn btn-accent" href="#install">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Install velo-de
+        </a>
+        <a class="btn btn-ghost" href="#suite">Explore Suite →</a>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Install ────────────────────────────────────────────────────────── -->
+<section class="section" style="max-width:860px" id="install">
+    <div class="section-eyebrow reveal">Installation</div>
+    <h2 class="section-title reveal d1">One repo. Everything included.</h2>
+    <p class="section-sub reveal d2">velo-de bundles the full suite with a single install script. No dependency hunting, no manual configuration — clone and run.</p>
+
+    <div class="terminal-card reveal d3">
+        <div class="t-titlebar">
+            <div class="t-dot t-dot-r"></div>
+            <div class="t-dot t-dot-y"></div>
+            <div class="t-dot t-dot-g"></div>
+            <span class="t-title-label">zsh — velo-de</span>
+        </div>
+        <div class="t-body">
+            <div class="t-line">
+                <span class="t-prompt">$</span>
+                <code class="t-cmd">git clone <span class="t-arg">https://github.com/sauder/velo-de</span></code>
+                <button class="copy-btn" onclick="copyCmd(this,'git clone https://github.com/sauder/velo-de')">Copy</button>
+            </div>
+            <div class="t-line">
+                <span class="t-prompt">$</span>
+                <code class="t-cmd">cd <span class="t-arg">velo-de</span> &amp;&amp; ./install.sh</code>
+                <button class="copy-btn" onclick="copyCmd(this,'cd velo-de && ./install.sh')">Copy</button>
+            </div>
+            <div class="t-line t-output" style="margin-top:6px">
+                <span class="t-comment">→ Checking dependencies...</span>
+            </div>
+            <div class="t-line t-output">
+                <span class="t-ok">✓</span>
+                <span class="t-comment" id="install-anim">Building 9 components...</span>
+            </div>
+        </div>
+        <div class="install-checklist">
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Shell</span></div>
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Browser</span></div>
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Player</span></div>
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Files</span></div>
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Launcher</span></div>
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Paper</span></div>
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo OSD</span></div>
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Commit</span></div>
+            <div class="ic-item"><div class="ic-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div><span class="ic-name">Velo Assistant</span></div>
+        </div>
+    </div>
+
+    <div class="req-row reveal d4">
+        <span class="req-tag">Wayland</span>
+        <span class="req-tag">Niri WM</span>
+        <span class="req-tag">Rust 1.75+</span>
+        <span class="req-tag">GTK4</span>
+        <span class="req-tag">pipewire</span>
+        <span class="req-tag">swww</span>
+        <span class="req-tag">Claude API key</span>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Suite ──────────────────────────────────────────────────────────── -->
+<section class="section" id="suite">
+    <div class="section-eyebrow reveal">The Suite</div>
+    <h2 class="section-title reveal d1">Nine tools, one design language</h2>
+
+    <div class="apps-grid">
+
+        <!-- Velo Shell (featured) -->
+        <a class="card card-featured" href="velo-bar.html" id="shell">
+            <div>
+                <div class="card-eyebrow">System Bar</div>
+                <div class="card-name">Velo Shell</div>
+                <p class="card-desc">The cockpit instrument cluster. Floating machined-glass pills anchor to the top of your screen — clock, system stats, battery, network, Bluetooth, volume and media controls, all in a unified layer above your wallpaper.</p>
+                <div class="chips">
+                    <span class="chip">Clock</span>
+                    <span class="chip">CPU / RAM</span>
+                    <span class="chip">Battery</span>
+                    <span class="chip">Network</span>
+                    <span class="chip">Bluetooth</span>
+                    <span class="chip">Volume</span>
+                    <span class="chip">Media</span>
+                    <span class="chip">Power Menu</span>
+                    <span class="chip">Calendar</span>
+                </div>
+                <div class="card-badge">Rust · GTK4 · Layer Shell</div>
+                <span class="card-link" style="margin-top:24px">Full details →</span>
+            </div>
+            <!-- Interactive cockpit bar -->
+            <div class="bar-demo" id="cockpit-demo" onclick="event.preventDefault()">
+                <div class="bar-row">
+                    <div class="pill pill-btn" id="pill-power" onclick="togglePopup('power-menu',event)">
+                        <span class="pill-icon">⏻</span>
+                        <div class="pill-popup" id="power-menu">
+                            <div class="popup-item" onclick="pillAction('Shutdown')">Shutdown</div>
+                            <div class="popup-item" onclick="pillAction('Restart')">Restart</div>
+                            <div class="popup-item" onclick="pillAction('Suspend')">Suspend</div>
+                            <div class="popup-item popup-item-dim" onclick="pillAction('Lock')">Lock</div>
+                        </div>
+                    </div>
+                    <div class="pill">
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                            <span class="stat-label">CPU</span>
+                            <span id="demo-cpu">12%</span>
+                        </div>
+                        <span class="pill-dim">/</span>
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                            <span class="stat-label">RAM</span>
+                            <span id="demo-ram">4.1G</span>
+                        </div>
+                    </div>
+                    <div class="pill pill-btn" id="pill-bt" onclick="toggleBT(event)">
+                        <span class="pill-icon" id="bt-icon" style="font-size:11px">⬡</span>
+                        <span id="bt-label" style="font-size:11.5px">BT</span>
+                    </div>
+                </div>
+                <div class="bar-row">
+                    <div class="pill" style="padding:6px 22px;gap:10px">
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+                            <div class="clock-time" id="demo-time">--:--</div>
+                            <div class="clock-date" id="demo-date">--- -- --</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bar-row">
+                    <div class="pill pill-btn" id="pill-net" onclick="togglePopup('net-menu',event)">
+                        <span class="pill-icon">▴</span>
+                        <span>WiFi</span>
+                        <span class="pill-dim">5G</span>
+                        <div class="pill-popup" id="net-menu">
+                            <div class="popup-stat"><span class="popup-stat-label">↓ Down</span><span id="net-down">23.4 MB/s</span></div>
+                            <div class="popup-stat"><span class="popup-stat-label">↑ Up</span><span id="net-up">2.1 MB/s</span></div>
+                            <div class="popup-stat"><span class="popup-stat-label">Signal</span><span>-48 dBm</span></div>
+                        </div>
+                    </div>
+                    <div class="pill pill-btn" id="pill-vol" onclick="togglePopup('vol-popup',event)">
+                        <span class="pill-icon">♪</span>
+                        <span id="demo-vol">72%</span>
+                        <div class="pill-popup" id="vol-popup">
+                            <div class="vol-slider-wrap">
+                                <input type="range" class="vol-slider" min="0" max="100" value="72" id="vol-slider"
+                                    oninput="setVolume(this.value)" onclick="event.stopPropagation()">
+                            </div>
+                            <div class="popup-stat" style="padding-top:2px">
+                                <span class="popup-stat-label">Output</span>
+                                <span style="font-size:10.5px;color:rgba(190,214,240,0.42)">Headphones</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pill pill-btn" id="pill-bat" onclick="togglePopup('bat-popup',event)">
+                        <span class="pill-icon" style="font-size:10px">⬡</span>
+                        <span id="demo-bat">84%</span>
+                        <span class="pill-dim">↑</span>
+                        <div class="pill-popup" id="bat-popup">
+                            <div class="popup-stat"><span class="popup-stat-label">Status</span><span>Charging</span></div>
+                            <div class="popup-stat"><span class="popup-stat-label">Full in</span><span>1h 12m</span></div>
+                            <div class="popup-stat"><span class="popup-stat-label">Health</span><span>94%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- Velo Browser -->
+        <a class="card" href="velo-browser.html">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3c-3.5 3.5-3.5 14.5 0 18M12 3c3.5 3.5 3.5 14.5 0 18"/><path d="M3 12h18"/><path d="M4.5 7.5h15M4.5 16.5h15"/></svg>
+            </div>
+            <div class="card-eyebrow">Web Browser</div>
+            <div class="card-name">Velo Browser</div>
+            <p class="card-desc">A WebKitGTK browser built around the cockpit aesthetic. Tab bar, find-in-page and a slide-out sidebar for history, bookmarks, notes and downloads.</p>
+            <div class="chips"><span class="chip">Tabs</span><span class="chip">Find in Page</span><span class="chip">History</span><span class="chip">Bookmarks</span><span class="chip">Notes</span><span class="chip">Downloads</span></div>
+            <a class="card-link" href="velo-browser.html">Details →</a>
+        </a>
+
+        <!-- Velo Player -->
+        <a class="card" href="velo-player.html">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="1" class="filled"/><line x1="12" y1="3" x2="12" y2="8.5" stroke-width="1"/><line x1="12" y1="15.5" x2="12" y2="21" stroke-width="1"/><line x1="3" y1="12" x2="8.5" y2="12" stroke-width="1"/><line x1="15.5" y1="12" x2="21" y2="12" stroke-width="1"/></svg>
+            </div>
+            <div class="card-eyebrow">Music Player</div>
+            <div class="card-name">Velo Player</div>
+            <p class="card-desc">Spotify client with a spinning vinyl record visualization. Playlist sidebar, animated seek bar, volume control and full track search.</p>
+            <div class="chips"><span class="chip">Vinyl Record</span><span class="chip">Spotify API</span><span class="chip">Seek Bar</span><span class="chip">Playlists</span><span class="chip">Search</span></div>
+            <a class="card-link" href="velo-player.html">Details →</a>
+        </a>
+
+        <!-- Velo Files -->
+        <a class="card" href="velo-files.html">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            </div>
+            <div class="card-eyebrow">File Manager</div>
+            <div class="card-name">Velo Files</div>
+            <p class="card-desc">A file manager that speaks the same design language. Bookmark sidebar, grid and list views, inline info panel, context menus and keyboard-first navigation.</p>
+            <div class="chips"><span class="chip">Grid / List</span><span class="chip">Bookmarks</span><span class="chip">Info Panel</span><span class="chip">Context Menu</span><span class="chip">Keyboard Nav</span></div>
+            <a class="card-link" href="velo-files.html">Details →</a>
+        </a>
+
+        <!-- Velo Launcher -->
+        <a class="card" href="velo-launcher.html">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+            </div>
+            <div class="card-eyebrow">App Launcher</div>
+            <div class="card-name">Velo Launcher</div>
+            <p class="card-desc">Fuzzy app launcher. A single glass search pill docks at the bottom center of your display — results float above it as you type.</p>
+            <div class="chips"><span class="chip">Fuzzy Search</span><span class="chip">Keyboard Nav</span><span class="chip">App Icons</span><span class="chip">Zero Mouse</span></div>
+            <a class="card-link" href="velo-launcher.html">Details →</a>
+        </a>
+
+        <!-- Velo Paper -->
+        <a class="card" href="velo-paper.html">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+            </div>
+            <div class="card-eyebrow">Wallpaper Switcher</div>
+            <div class="card-name">Velo Paper</div>
+            <p class="card-desc">Browse and apply wallpapers from a searchable thumbnail grid. One click, instant swap, all wrapped in the Velo glass panel.</p>
+            <div class="chips"><span class="chip">Thumbnail Grid</span><span class="chip">Search</span><span class="chip">One-Click Apply</span><span class="chip">swww</span></div>
+            <a class="card-link" href="velo-paper.html">Details →</a>
+        </a>
+
+        <!-- Velo OSD -->
+        <a class="card" href="velo-osd.html" id="osd">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+            </div>
+            <div class="card-eyebrow">On-Screen Display</div>
+            <div class="card-name">Velo OSD</div>
+            <p class="card-desc">Volume and brightness overlays with a glowing progress bar. Notification stack with app icons and urgency levels. Auto-dismisses after 2.5 seconds.</p>
+            <div class="osd-demo" onclick="event.preventDefault()">
+                <div class="osd-icon" id="osd-icon">🔊</div>
+                <div class="osd-body">
+                    <div class="osd-track"><div class="osd-fill" id="osd-fill"></div></div>
+                    <div class="osd-val" id="osd-val">72%</div>
+                </div>
+            </div>
+            <div class="chips" style="margin-top:16px"><span class="chip">Volume</span><span class="chip">Brightness</span><span class="chip">Notifications</span><span class="chip">Border Light</span></div>
+            <a class="card-link" href="velo-osd.html">Details →</a>
+        </a>
+
+        <!-- Velo Commit -->
+        <a class="card" href="velo-commit.html" id="ai">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+            </div>
+            <div class="card-eyebrow">AI Git Tool</div>
+            <div class="card-name">Velo Commit</div>
+            <p class="card-desc">Pipes your staged diff to Claude and generates a commit message in a Velo glass window. One keystroke from diff to committed — no copy-paste.</p>
+            <div class="chips"><span class="chip">Claude API</span><span class="chip">Git Diff</span><span class="chip">One-Click Commit</span><span class="chip">Streaming</span></div>
+            <a class="card-link" href="velo-commit.html">Details →</a>
+        </a>
+
+        <!-- Velo Assistant -->
+        <a class="card" href="velo-assistant.html">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            </div>
+            <div class="card-eyebrow">AI Chat</div>
+            <div class="card-name">Velo Assistant</div>
+            <p class="card-desc">A Claude chat GUI in the Velo design language. Glass chat bubbles, streaming responses and a rounded input bar — your AI assistant, native on Wayland.</p>
+            <div class="chips"><span class="chip">Claude API</span><span class="chip">Streaming</span><span class="chip">Chat History</span><span class="chip">Native GTK4</span></div>
+            <a class="card-link" href="velo-assistant.html">Details →</a>
+        </a>
+
+    </div>
+</section>
+
+<!-- ── Footer ──────────────────────────────────────────────────────────── -->
+<footer>
+    <div class="footer-brand">Velo</div>
+    <div class="footer-links">
+        <a class="footer-link" href="https://github.com/sauder/velo-de">GitHub</a>
+        <a class="footer-link" href="velo-bar.html">Shell</a>
+        <a class="footer-link" href="velo-browser.html">Browser</a>
+        <a class="footer-link" href="velo-launcher.html">Launcher</a>
+        <a class="footer-link" href="velo-paper.html">Paper</a>
+        <a class="footer-link" href="velo-osd.html">OSD</a>
+        <a class="footer-link" href="velo-player.html">Player</a>
+        <a class="footer-link" href="velo-files.html">Files</a>
+        <a class="footer-link" href="velo-commit.html">Commit</a>
+        <a class="footer-link" href="velo-assistant.html">Assistant</a>
+    </div>
+    <div class="footer-text">Machined glass · GTK4 · Rust · Niri / Wayland</div>
+</footer>
+
+<script>
+/* ── Scroll progress ─────────────────────────────────────────────────────── */
+(function () {
+    const el = document.getElementById('scroll-progress');
+    window.addEventListener('scroll', () => {
+        const total = document.documentElement.scrollHeight - window.innerHeight;
+        el.style.transform = `scaleX(${window.scrollY / total})`;
+    }, { passive: true });
+})();
+
+/* ── Hero glow parallax ─────────────────────────────────────────────────── */
+(function () {
+    const glow = document.getElementById('hero-glow');
+    window.addEventListener('scroll', () => {
+        glow.style.transform = `translate(-50%, calc(-50% + ${window.scrollY * 0.22}px))`;
+    }, { passive: true });
+})();
+
+/* ── Scroll reveal observer ─────────────────────────────────────────────── */
+(function () {
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (!e.isIntersecting) return;
+            e.target.classList.add('in');
+            io.unobserve(e.target);
+        });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el => io.observe(el));
+})();
+
+/* ── Card reveal (staggered) ────────────────────────────────────────────── */
+(function () {
+    const cards = [...document.querySelectorAll('.card')];
+    let done = 0;
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (!e.isIntersecting) return;
+            const idx = cards.indexOf(e.target);
+            setTimeout(() => e.target.classList.add('in'), Math.min(idx * 65, 360));
+            io.unobserve(e.target);
+            if (++done === cards.length) io.disconnect();
+        });
+    }, { threshold: 0.07 });
+    cards.forEach(c => io.observe(c));
+})();
+
+/* ── Soundwave canvas ───────────────────────────────────────────────────── */
+(function () {
+    const canvas = document.getElementById('soundwave');
+    const ctx    = canvas.getContext('2d');
+    const N      = 82;
+    const phase  = new Float32Array(N).map(() => Math.random() * Math.PI * 2);
+    const speed  = new Float32Array(N).map(() => 0.45 + Math.random() * 0.90);
+    const amp    = new Float32Array(N).map(() => 0.28 + Math.random() * 0.46);
+    let mouseNorm = -1;
+    const ripples = [];
+
+    function resize () {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width  = canvas.clientWidth  * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        ctx.scale(dpr, dpr);
+    }
+    new ResizeObserver(resize).observe(canvas);
+    resize();
+
+    canvas.addEventListener('mousemove', e => {
+        const r = canvas.getBoundingClientRect();
+        mouseNorm = (e.clientX - r.left) / r.width;
+    });
+    canvas.addEventListener('mouseleave', () => { mouseNorm = -1; });
+    canvas.addEventListener('click', e => {
+        const r = canvas.getBoundingClientRect();
+        ripples.push({ nx: (e.clientX - r.left) / r.width, t: performance.now() });
+    });
+
+    let pageMouse = -1;
+    document.addEventListener('mousemove', e => {
+        const r = canvas.getBoundingClientRect();
+        pageMouse = (e.clientY < r.top || e.clientY > r.bottom) ? e.clientX / window.innerWidth : -1;
+    });
+
+    function draw (now) {
+        const t = now * 0.001;
+        const W = canvas.clientWidth, H = canvas.clientHeight;
+        ctx.clearRect(0, 0, W, H);
+        while (ripples.length && now - ripples[0].t > 2400) ripples.shift();
+        const barW = W / N, gap = 1.6, halfH = H * 0.5, maxH = halfH * 0.86;
+        const mNorm = mouseNorm >= 0 ? mouseNorm : (pageMouse >= 0 ? pageMouse : -1);
+        for (let i = 0; i < N; i++) {
+            const norm = i / (N - 1);
+            const base = Math.sin(t * speed[i] + phase[i]) * amp[i]
+                       + Math.sin(t * speed[i] * 0.51 + phase[i] * 1.73) * (amp[i] * 0.36);
+            let h = (0.10 + Math.abs(base)) * maxH;
+            let glow = 0;
+            if (mNorm >= 0) {
+                const d  = Math.abs(norm - mNorm);
+                const bl = Math.max(0, 1 - d * (mouseNorm >= 0 ? 3.2 : 6.0)) ** 1.6;
+                h   += bl * maxH * (mouseNorm >= 0 ? 0.68 : 0.25);
+                glow = bl;
+            }
+            for (const rip of ripples) {
+                const age   = (now - rip.t) * 0.001;
+                const dist  = Math.abs(norm - rip.nx);
+                const delta = dist - age * 0.56;
+                if (delta > -0.07 && delta < 0.025) {
+                    const fade  = Math.max(0, 1 - age * 0.52);
+                    const shape = 1 - Math.abs(delta) / 0.07;
+                    const boost = Math.max(0, fade * shape * 0.78);
+                    h += boost * maxH;
+                    glow = Math.max(glow, boost * fade);
+                }
+            }
+            h = Math.min(h, maxH);
+            const bx = i * barW + gap * 0.5, bw = barW - gap, by = halfH - h;
+            ctx.shadowBlur  = 5 + glow * 22;
+            ctx.shadowColor = `rgba(138,180,212,${0.28 + glow * 0.48})`;
+            const aTop = 0.07 + glow * 0.18, aMid = 0.50 + glow * 0.40;
+            const gr = ctx.createLinearGradient(0, by, 0, by + h * 2);
+            gr.addColorStop(0,    `rgba(100,160,205,${aTop})`);
+            gr.addColorStop(0.35, `rgba(138,180,212,${aMid})`);
+            gr.addColorStop(0.5,  `rgba(170,210,240,${aMid + 0.08})`);
+            gr.addColorStop(0.65, `rgba(138,180,212,${aMid})`);
+            gr.addColorStop(1,    `rgba(100,160,205,${aTop})`);
+            ctx.fillStyle = gr;
+            ctx.beginPath();
+            ctx.roundRect(bx, by, bw, h * 2, Math.min(bw * 0.5, 2.5));
+            ctx.fill();
+        }
+        requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+})();
+
+/* ── Live clock ─────────────────────────────────────────────────────────── */
+(function () {
+    const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function tick () {
+        const d = new Date();
+        const h = String(d.getHours()).padStart(2,'0');
+        const m = String(d.getMinutes()).padStart(2,'0');
+        const str = `${h}:${m}`;
+        ['demo-time','prev-time'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = str; });
+        const ds = `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
+        const dd = document.getElementById('demo-date'); if(dd) dd.textContent = ds;
+    }
+    tick();
+    setInterval(tick, 10000);
+})();
+
+/* ── CPU/RAM simulation ─────────────────────────────────────────────────── */
+(function () {
+    let cpu = 12, ram = 4.1;
+    setInterval(() => {
+        cpu = Math.max(2, Math.min(85, cpu + (Math.random() - 0.48) * 14));
+        ram = Math.max(1.8, Math.min(15.9, ram + (Math.random() - 0.5) * 0.3));
+        const cpuStr = Math.round(cpu) + '%';
+        const ramStr = ram.toFixed(1) + 'G';
+        ['demo-cpu','prev-cpu'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = cpuStr; });
+        ['demo-ram','prev-ram'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = ramStr; });
+    }, 2200);
+})();
+
+/* ── Network speed simulation ───────────────────────────────────────────── */
+(function () {
+    let nd = 23.4, nu = 2.1;
+    setInterval(() => {
+        nd = Math.max(0.1, nd + (Math.random() - 0.5) * 10);
+        nu = Math.max(0.1, nu + (Math.random() - 0.5) * 2);
+        const dn = document.getElementById('net-down'); if(dn) dn.textContent = nd.toFixed(1) + ' MB/s';
+        const un = document.getElementById('net-up');   if(un) un.textContent = nu.toFixed(1) + ' MB/s';
+    }, 1600);
+})();
+
+/* ── OSD demo ───────────────────────────────────────────────────────────── */
+(function () {
+    const fill  = document.getElementById('osd-fill');
+    const label = document.getElementById('osd-val');
+    const icon  = document.getElementById('osd-icon');
+    const volEl = document.getElementById('demo-vol');
+    const slider = document.getElementById('vol-slider');
+    const prevVol = document.getElementById('prev-vol');
+    let target = 72, current = 72;
+    const vals = [18,35,48,62,72,85,100,55,30,78,42,90];
+    function pickNext () {
+        target = vals[Math.floor(Math.random() * vals.length)];
+        icon.textContent = target <= 0 ? '🔇' : target < 35 ? '🔈' : target < 70 ? '🔉' : '🔊';
+        setTimeout(pickNext, 1600 + Math.random() * 1600);
+    }
+    setTimeout(pickNext, 2000);
+    function animate () {
+        current += (target - current) * 0.055;
+        const pct = Math.round(current);
+        fill.style.width  = `${current}%`;
+        label.textContent = `${pct}%`;
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    window._setVol = function(v) {
+        target = +v;
+        const vStr = Math.round(v) + '%';
+        if (volEl)   volEl.textContent  = vStr;
+        if (prevVol) prevVol.textContent = vStr;
+        if (slider)  slider.value = v;
+        icon.textContent = v <= 0 ? '🔇' : v < 35 ? '🔈' : v < 70 ? '🔉' : '🔊';
+    };
+})();
+
+/* ── Cockpit pill interactions ──────────────────────────────────────────── */
+(function () {
+    let openPopup = null;
+
+    window.togglePopup = function (id, e) {
+        if (e) e.preventDefault();
+        const popup = document.getElementById(id);
+        if (!popup) return;
+        if (openPopup && openPopup !== popup) {
+            openPopup.classList.remove('open');
+        }
+        popup.classList.toggle('open');
+        openPopup = popup.classList.contains('open') ? popup : null;
+    };
+
+    document.addEventListener('click', e => {
+        if (openPopup && !e.target.closest('.pill-btn')) {
+            openPopup.classList.remove('open');
+            openPopup = null;
+        }
+    });
+
+    window.pillAction = function (label) {
+        if (openPopup) { openPopup.classList.remove('open'); openPopup = null; }
+        const pill = document.getElementById('pill-power');
+        const orig = pill.querySelector('.pill-icon').textContent;
+        pill.querySelector('.pill-icon').textContent = '…';
+        setTimeout(() => { pill.querySelector('.pill-icon').textContent = orig; }, 1200);
+    };
+
+    window.toggleBT = function (e) {
+        if (e) e.preventDefault();
+        const pill  = document.getElementById('pill-bt');
+        const icon  = document.getElementById('bt-icon');
+        const label = document.getElementById('bt-label');
+        const on = pill.classList.toggle('active');
+        icon.style.color  = on ? 'rgba(138,180,212,0.90)' : '';
+        label.textContent = on ? 'On' : 'BT';
+    };
+
+    window.setVolume = function (val) {
+        window._setVol && window._setVol(val);
+    };
+})();
+
+/* ── Copy command ───────────────────────────────────────────────────────── */
+window.copyCmd = function (btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+};
+</script>
+
+</body>
+</html>

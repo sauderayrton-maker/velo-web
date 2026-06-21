@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo Assistant — Claude Chat GUI</title>
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        :root{--accent:#8ab4d4;--bg:#09090c;--text:rgba(228,238,252,0.88);--text-sub:rgba(165,190,218,0.55);--border:rgba(195,215,240,0.09);--glass:linear-gradient(rgba(18,21,28,0.94),rgba(7,8,13,0.96))}
+        html{scroll-behavior:smooth}
+        body{background:var(--bg);color:var(--text);font-family:"Inter","SF Pro Display","Cantarell",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;opacity:0.028;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E")}
+        #scroll-progress{position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(80,140,190,0.6),rgba(138,180,212,0.9) 50%,rgba(170,215,245,1));transform-origin:left;transform:scaleX(0);z-index:9100;pointer-events:none;transition:transform 60ms linear}
+        .nav-wrap{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding:14px 24px;z-index:500;pointer-events:none}
+        nav{pointer-events:all;display:flex;align-items:center;padding:3px 5px;border-radius:999px;background:var(--glass);border:1px solid var(--border);box-shadow:inset 0 1px 0 rgba(174,206,236,0.09),inset 0 -1px 0 rgba(0,0,0,0.50),0 8px 32px rgba(0,0,0,0.65);position:relative}
+        nav::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.38) 50%,transparent)}
+        .nav-brand{font-size:9.5px;font-weight:700;letter-spacing:4.5px;color:rgba(138,180,212,0.48);padding:6px 16px 6px 12px;text-decoration:none;transition:color 160ms}
+        .nav-brand:hover{color:rgba(190,222,250,0.90)}
+        .nav-sep{width:1px;height:16px;background:rgba(195,215,240,0.07);margin:0 2px}
+        .nav-link,.nav-back{font-size:12.5px;font-weight:450;color:rgba(190,214,240,0.44);text-decoration:none;padding:5px 14px;border-radius:999px;transition:background 110ms,color 110ms;white-space:nowrap}
+        .nav-back{font-size:12px;color:rgba(138,180,212,0.38)}
+        .nav-link:hover,.nav-back:hover{background:rgba(138,180,212,0.10);color:rgba(228,242,255,0.90)}
+        .reveal{opacity:0;transform:translateY(24px)}.reveal.in{opacity:1;transform:none;transition:opacity 700ms cubic-bezier(0.22,1,0.36,1),transform 700ms cubic-bezier(0.22,1,0.36,1)}
+        .d1{transition-delay:90ms}.d2{transition-delay:180ms}.d3{transition-delay:270ms}
+        @keyframes heroUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+        .hero{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:110px 24px 80px;text-align:center;overflow:hidden}
+        .hero-glow{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);width:1000px;height:500px;background:radial-gradient(ellipse,rgba(138,180,212,0.065) 0%,transparent 65%);pointer-events:none}
+        .breadcrumb{font-size:11px;color:rgba(138,180,212,0.30);margin-bottom:18px;animation:heroUp 700ms 100ms cubic-bezier(0.22,1,0.36,1) both}
+        .breadcrumb a{color:rgba(138,180,212,0.42);text-decoration:none}
+        .hero-eyebrow{font-size:9px;font-weight:700;letter-spacing:5px;color:rgba(138,180,212,0.42);text-transform:uppercase;margin-bottom:22px;animation:heroUp 700ms 200ms cubic-bezier(0.22,1,0.36,1) both}
+        .hero-title{font-size:clamp(44px,7vw,88px);font-weight:750;line-height:1.0;letter-spacing:-2px;color:rgba(234,242,254,0.96);margin-bottom:22px;animation:heroUp 700ms 320ms cubic-bezier(0.22,1,0.36,1) both}
+        .hero-title em{font-style:normal;color:var(--accent)}
+        .hero-sub{font-size:15px;color:var(--text-sub);max-width:480px;line-height:1.75;margin-bottom:52px;animation:heroUp 700ms 440ms cubic-bezier(0.22,1,0.36,1) both}
+
+        /* Chat demo */
+        .chat-wrap{width:100%;max-width:540px;animation:heroUp 700ms 560ms cubic-bezier(0.22,1,0.36,1) both}
+        .chat-panel{background:linear-gradient(160deg,rgba(10,12,18,0.97),rgba(5,6,10,0.98));border:1px solid rgba(195,215,240,0.10);border-radius:20px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(174,206,236,0.07),0 32px 80px rgba(0,0,0,0.75),0 0 60px rgba(138,180,212,0.07)}
+        .chat-header{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(195,215,240,0.06)}
+        .ch-avatar{width:28px;height:28px;border-radius:8px;background:rgba(138,180,212,0.10);border:1px solid rgba(138,180,212,0.18);display:flex;align-items:center;justify-content:center;font-size:14px}
+        .ch-name{font-size:13px;font-weight:600;color:rgba(220,234,252,0.80)}
+        .ch-status{font-size:10.5px;color:rgba(100,210,130,0.55);margin-left:auto;display:flex;align-items:center;gap:5px}
+        .ch-dot{width:6px;height:6px;border-radius:50%;background:rgba(100,210,130,0.65)}
+        .chat-msgs{padding:14px;display:flex;flex-direction:column;gap:10px;min-height:240px;max-height:280px;overflow-y:auto}
+        .msg{max-width:85%;border-radius:14px;padding:10px 14px;font-size:13px;line-height:1.55;animation:msgIn 250ms cubic-bezier(0.22,1,0.36,1) both}
+        @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+        .msg-user{align-self:flex-end;background:rgba(138,180,212,0.12);border:1px solid rgba(138,180,212,0.18);color:rgba(220,234,252,0.82)}
+        .msg-ai{align-self:flex-start;background:rgba(14,17,24,0.80);border:1px solid rgba(195,215,240,0.09);color:rgba(190,214,240,0.75)}
+        .msg-ai .ai-badge{font-size:9px;font-weight:700;letter-spacing:1px;color:rgba(138,180,212,0.36);text-transform:uppercase;display:block;margin-bottom:4px}
+        .typing-indicator{display:flex;gap:4px;align-items:center;padding:10px 14px}
+        .t-dot{width:6px;height:6px;border-radius:50%;background:rgba(138,180,212,0.45);animation:tdot 1.2s ease infinite}
+        .t-dot:nth-child(2){animation-delay:0.2s}
+        .t-dot:nth-child(3){animation-delay:0.4s}
+        @keyframes tdot{0%,80%,100%{transform:scale(1);opacity:0.5}40%{transform:scale(1.3);opacity:1}}
+        .chat-input-row{display:flex;align-items:flex-end;gap:8px;padding:12px 14px;border-top:1px solid rgba(195,215,240,0.06)}
+        .chat-input{flex:1;background:rgba(138,180,212,0.05);border:1px solid rgba(195,215,240,0.09);border-radius:12px;padding:9px 13px;font-family:inherit;font-size:13px;color:rgba(220,234,252,0.82);outline:none;resize:none;max-height:80px;transition:border-color 140ms}
+        .chat-input:focus{border-color:rgba(138,180,212,0.22)}
+        .chat-input::placeholder{color:rgba(138,180,212,0.22)}
+        .send-btn{width:36px;height:36px;border-radius:10px;background:rgba(138,180,212,0.12);border:1px solid rgba(138,180,212,0.22);color:rgba(190,222,250,0.75);font-size:14px;cursor:pointer;transition:all 130ms;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .send-btn:hover{background:rgba(138,180,212,0.22);box-shadow:0 0 12px rgba(138,180,212,0.12)}
+
+        .section{padding:90px 24px;max-width:1080px;margin:0 auto}
+        .section-eyebrow{font-size:9px;font-weight:700;letter-spacing:4px;color:rgba(138,180,212,0.36);text-transform:uppercase;text-align:center;margin-bottom:12px}
+        .section-title{font-size:clamp(24px,3.2vw,38px);font-weight:650;color:rgba(234,242,254,0.93);text-align:center;letter-spacing:-0.5px;margin-bottom:56px}
+        .divider{width:100%;max-width:1080px;margin:0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.12) 30%,rgba(138,180,212,0.12) 70%,transparent)}
+        .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        @media(max-width:820px){.feature-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:520px){.feature-grid{grid-template-columns:1fr}}
+        .feat-card{background:linear-gradient(160deg,rgba(14,17,24,0.95),rgba(7,8,14,0.97));border:1px solid rgba(195,215,240,0.085);border-radius:18px;padding:26px;box-shadow:inset 0 1px 0 rgba(174,206,236,0.07),0 12px 36px rgba(0,0,0,0.45)}
+        .feat-icon{width:40px;height:40px;border-radius:12px;background:rgba(138,180,212,0.07);border:1px solid rgba(138,180,212,0.13);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+        .feat-icon svg{width:18px;height:18px;fill:none;stroke:rgba(138,180,212,0.70);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+        .feat-name{font-size:16px;font-weight:640;color:rgba(234,242,254,0.92);letter-spacing:-0.2px;margin-bottom:8px}
+        .feat-desc{font-size:13px;color:rgba(165,190,218,0.52);line-height:1.70}
+        .more-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+        @media(max-width:700px){.more-grid{grid-template-columns:repeat(2,1fr)}}
+        .more-card{background:linear-gradient(160deg,rgba(14,17,24,0.95),rgba(7,8,14,0.97));border:1px solid rgba(195,215,240,0.07);border-radius:14px;padding:16px 18px;text-decoration:none;display:block;transition:border-color 150ms,transform 180ms}
+        .more-card:hover{border-color:rgba(138,180,212,0.16);transform:translateY(-2px)}
+        .more-card-name{font-size:13.5px;font-weight:600;color:rgba(220,232,250,0.80);margin-bottom:4px}
+        .more-card-sub{font-size:11px;color:rgba(138,180,212,0.34)}
+        footer{border-top:1px solid rgba(195,215,240,0.05);padding:50px 24px;text-align:center}
+        .footer-brand{font-size:9px;font-weight:700;letter-spacing:5px;color:rgba(138,180,212,0.26);text-transform:uppercase;margin-bottom:8px}
+        .footer-text{font-size:11px;color:rgba(150,182,214,0.18)}
+    </style>
+</head>
+<body>
+<div id="scroll-progress"></div>
+<div class="nav-wrap"><nav>
+    <a class="nav-brand" href="index.html">VELO</a>
+    <div class="nav-sep"></div>
+    <a class="nav-back" href="index.html#suite">← Suite</a>
+    <a class="nav-link" href="velo-bar.html">Shell</a>
+    <a class="nav-link" href="velo-commit.html">Commit</a>
+    <a class="nav-link" href="index.html#install">Install</a>
+</nav></div>
+
+<section class="hero">
+    <div class="hero-glow"></div>
+    <p class="breadcrumb"><a href="index.html">Velo</a> / Assistant</p>
+    <p class="hero-eyebrow">AI Chat</p>
+    <h1 class="hero-title">Claude, native<br><em>on Wayland.</em></h1>
+    <p class="hero-sub">A Claude chat GUI built in the Velo glass aesthetic. Streaming responses, glass chat bubbles, persistent history and a rounded input bar — your AI assistant without a browser.</p>
+
+    <div class="chat-wrap">
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="ch-avatar">✦</div>
+                <span class="ch-name">Velo Assistant</span>
+                <span class="ch-status"><span class="ch-dot"></span>Claude Sonnet</span>
+            </div>
+            <div class="chat-msgs" id="chat-msgs">
+                <div class="msg msg-ai"><span class="ai-badge">Assistant</span>Hello. I'm Claude, running natively in your Velo environment. How can I help you today?</div>
+            </div>
+            <div class="chat-input-row">
+                <textarea class="chat-input" id="chat-input" placeholder="Message Claude…" rows="1" onkeydown="handleKey(event)"></textarea>
+                <button class="send-btn" onclick="sendMessage()">↑</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+<section class="section">
+    <p class="section-eyebrow reveal">Features</p>
+    <h2 class="section-title reveal d1">AI that fits your desktop</h2>
+    <div class="feature-grid">
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="feat-name">Glass Chat Bubbles</div><p class="feat-desc">User messages in steel-blue glass. Claude responses in deep charcoal glass. The Velo aesthetic throughout.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="feat-name">Streaming Responses</div><p class="feat-desc">Claude's response streams token-by-token using the Anthropic streaming API. No waiting for the full response.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="feat-name">Chat History</div><p class="feat-desc">Conversations persist to disk. Browse previous sessions from the history sidebar. Search your entire chat history.</p></div>
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div><div class="feat-name">Native GTK4</div><p class="feat-desc">Built with GTK4 and Rust. No Electron, no browser, no WebView. 12 MB. Starts in under 200ms.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="feat-name">Markdown Rendering</div><p class="feat-desc">Claude's responses render as formatted markdown — code blocks with syntax highlighting, lists, headers, tables.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="feat-name">Local API Key</div><p class="feat-desc">Your Anthropic API key stays on your machine, passed directly to the API. No cloud service, no middleman.</p></div>
+    </div>
+</section>
+
+<div class="divider"></div>
+<section class="section"><p class="section-eyebrow reveal">More from Velo</p><h2 class="section-title reveal d1">The Suite</h2><div class="more-grid">
+    <a class="more-card reveal" href="velo-bar.html"><div class="more-card-name">Velo Shell</div><div class="more-card-sub">Cockpit instrument bar</div></a>
+    <a class="more-card reveal d1" href="velo-browser.html"><div class="more-card-name">Velo Browser</div><div class="more-card-sub">WebKit cockpit browser</div></a>
+    <a class="more-card reveal d2" href="velo-launcher.html"><div class="more-card-name">Velo Launcher</div><div class="more-card-sub">Fuzzy app launcher</div></a>
+    <a class="more-card reveal d3" href="velo-paper.html"><div class="more-card-name">Velo Paper</div><div class="more-card-sub">Wallpaper switcher</div></a>
+    <a class="more-card reveal" href="velo-osd.html"><div class="more-card-name">Velo OSD</div><div class="more-card-sub">Volume overlay</div></a>
+    <a class="more-card reveal d1" href="velo-player.html"><div class="more-card-name">Velo Player</div><div class="more-card-sub">Spotify vinyl client</div></a>
+    <a class="more-card reveal d2" href="velo-files.html"><div class="more-card-name">Velo Files</div><div class="more-card-sub">Glass file manager</div></a>
+    <a class="more-card reveal d3" href="velo-commit.html"><div class="more-card-name">Velo Commit</div><div class="more-card-sub">AI git tool</div></a>
+</div></section>
+
+<footer><div class="footer-brand">Velo Assistant</div><div class="footer-text">GTK4 · Rust · Claude API · Wayland</div></footer>
+
+<script>
+(function(){const el=document.getElementById('scroll-progress');window.addEventListener('scroll',()=>{const t=document.documentElement.scrollHeight-window.innerHeight;el.style.transform=`scaleX(${window.scrollY/t})`;},{passive:true});})();
+(function(){const io=new IntersectionObserver(e=>e.forEach(x=>{if(!x.isIntersecting)return;x.target.classList.add('in');io.unobserve(x.target);}),{threshold:0.08});document.querySelectorAll('.reveal').forEach(el=>io.observe(el));})();
+
+const RESPONSES=[
+    'Sure — in Rust, you can use the <code>tokio</code> crate for async runtimes. Add <code>tokio = { features = ["full"] }</code> to your <code>Cargo.toml</code>, then annotate your main function with <code>#[tokio::main]</code>.',
+    'The Velo design language uses three principles: deep black backgrounds (#09090c), steel-blue accents (#8ab4d4), and machined-glass surfaces with subtle inset highlights and drop shadows.',
+    'For GTK4 layer shell positioning, use <code>gtk4_layer_shell::set_anchor</code> with the <code>Edge::Top</code> variant and set <code>set_exclusive_zone</code> to the bar height so windows avoid the reserved area.',
+    'A good commit message answers "why, not what". The diff already shows what changed — your message should explain the motivation and any non-obvious implications of the change.',
+];
+let respIdx=0,busy=false;
+
+function addMsg(text,type){
+    const msgs=document.getElementById('chat-msgs');
+    const el=document.createElement('div');
+    el.className='msg msg-'+type;
+    if(type==='ai') el.innerHTML='<span class="ai-badge">Assistant</span>'+text;
+    else el.textContent=text;
+    msgs.appendChild(el);
+    msgs.scrollTop=msgs.scrollHeight;
+    return el;
+}
+
+function showTyping(){
+    const msgs=document.getElementById('chat-msgs');
+    const el=document.createElement('div');
+    el.className='msg msg-ai';
+    el.innerHTML='<div class="typing-indicator"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div>';
+    msgs.appendChild(el);
+    msgs.scrollTop=msgs.scrollHeight;
+    return el;
+}
+
+window.sendMessage=function(){
+    if(busy)return;
+    const input=document.getElementById('chat-input');
+    const text=input.value.trim();
+    if(!text)return;
+    input.value='';
+    addMsg(text,'user');
+    busy=true;
+    const typing=showTyping();
+    const resp=RESPONSES[respIdx%RESPONSES.length];
+    respIdx++;
+    setTimeout(()=>{
+        typing.remove();
+        const el=addMsg('','ai');
+        el.innerHTML='<span class="ai-badge">Assistant</span>';
+        let i=0;
+        const stripped=resp.replace(/<[^>]+>/g,'');
+        const interval=setInterval(()=>{
+            i++;
+            const partial=resp.replace(/<[^>]+>/g,'').slice(0,i);
+            el.innerHTML='<span class="ai-badge">Assistant</span>'+partial+(i<stripped.length?'<span style="opacity:0.5">▌</span>':'');
+            document.getElementById('chat-msgs').scrollTop=9999;
+            if(i>=stripped.length){clearInterval(interval);el.innerHTML='<span class="ai-badge">Assistant</span>'+resp;busy=false;}
+        },14);
+    },700+Math.random()*400);
+};
+
+window.handleKey=function(e){
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
+};
+</script>
+</body>
+</html>

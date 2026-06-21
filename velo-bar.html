@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo Shell — Cockpit Instrument Cluster</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --accent: #8ab4d4;
+            --bg: #09090c;
+            --text: rgba(228,238,252,0.88);
+            --text-sub: rgba(165,190,218,0.55);
+            --border: rgba(195,215,240,0.09);
+            --glass: linear-gradient(rgba(18,21,28,0.94), rgba(7,8,13,0.96));
+        }
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg); color: var(--text); font-family: "Inter","SF Pro Display","Cantarell",system-ui,sans-serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        body::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9000; opacity: 0.028; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+        #scroll-progress { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, rgba(80,140,190,0.6), rgba(138,180,212,0.9) 50%, rgba(170,215,245,1)); transform-origin: left; transform: scaleX(0); z-index: 9100; pointer-events: none; transition: transform 60ms linear; }
+
+        .nav-wrap { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: center; padding: 14px 24px; z-index: 500; pointer-events: none; }
+        nav { pointer-events: all; display: flex; align-items: center; padding: 3px 5px; border-radius: 999px; background: var(--glass); border: 1px solid var(--border); box-shadow: inset 0 1px 0 rgba(174,206,236,0.09), inset 0 -1px 0 rgba(0,0,0,0.50), 0 8px 32px rgba(0,0,0,0.65), 0 0 40px rgba(138,180,212,0.05); position: relative; }
+        nav::before { content: ''; position: absolute; top: 0; left: 15%; right: 15%; height: 1px; background: linear-gradient(90deg, transparent, rgba(138,180,212,0.38) 50%, transparent); }
+        .nav-brand { font-size: 9.5px; font-weight: 700; letter-spacing: 4.5px; color: rgba(138,180,212,0.48); padding: 6px 16px 6px 12px; text-decoration: none; transition: color 160ms; }
+        .nav-brand:hover { color: rgba(190,222,250,0.90); }
+        .nav-sep { width: 1px; height: 16px; background: rgba(195,215,240,0.07); margin: 0 2px; }
+        .nav-link { font-size: 12.5px; font-weight: 450; color: rgba(190,214,240,0.44); text-decoration: none; padding: 5px 14px; border-radius: 999px; transition: background 110ms, color 110ms; white-space: nowrap; }
+        .nav-link:hover { background: rgba(138,180,212,0.10); color: rgba(228,242,255,0.90); }
+        .nav-back { font-size: 12px; color: rgba(138,180,212,0.38); text-decoration: none; padding: 5px 12px; border-radius: 999px; transition: color 120ms; }
+        .nav-back:hover { color: rgba(190,222,250,0.75); }
+
+        .reveal { opacity: 0; transform: translateY(24px); }
+        .reveal-left { opacity: 0; transform: translateX(-28px); }
+        .reveal-right { opacity: 0; transform: translateX(28px); }
+        .reveal.in, .reveal-left.in, .reveal-right.in { opacity: 1; transform: none; transition: opacity 700ms cubic-bezier(0.22,1,0.36,1), transform 700ms cubic-bezier(0.22,1,0.36,1); }
+        .d1 { transition-delay: 90ms; } .d2 { transition-delay: 180ms; } .d3 { transition-delay: 270ms; } .d4 { transition-delay: 360ms; }
+
+        /* ── Hero ─────────────────────────────────────────────────── */
+        .hero { min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding: 110px 24px 80px; text-align: center; overflow: hidden; }
+        .hero-glow { position: absolute; top: 40%; left: 50%; transform: translate(-50%,-50%); width: 1000px; height: 500px; background: radial-gradient(ellipse, rgba(138,180,212,0.065) 0%, transparent 65%); pointer-events: none; }
+        .breadcrumb { font-size: 11px; color: rgba(138,180,212,0.30); letter-spacing: 0.5px; margin-bottom: 18px; animation: heroUp 700ms 100ms cubic-bezier(0.22,1,0.36,1) both; }
+        .breadcrumb a { color: rgba(138,180,212,0.42); text-decoration: none; transition: color 140ms; }
+        .breadcrumb a:hover { color: rgba(190,222,250,0.70); }
+        .hero-eyebrow { font-size: 9px; font-weight: 700; letter-spacing: 5px; color: rgba(138,180,212,0.42); text-transform: uppercase; margin-bottom: 22px; animation: heroUp 700ms 200ms cubic-bezier(0.22,1,0.36,1) both; }
+        .hero-title { font-size: clamp(44px,7vw,88px); font-weight: 750; line-height: 1.0; letter-spacing: -2px; color: rgba(234,242,254,0.96); margin-bottom: 22px; animation: heroUp 700ms 320ms cubic-bezier(0.22,1,0.36,1) both; }
+        .hero-title em { font-style: normal; color: var(--accent); }
+        .hero-sub { font-size: 15px; color: var(--text-sub); max-width: 500px; line-height: 1.75; margin-bottom: 56px; animation: heroUp 700ms 440ms cubic-bezier(0.22,1,0.36,1) both; }
+        @keyframes heroUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+        /* ── Full interactive cockpit demo ────────────────────────── */
+        .cockpit-demo-wrap {
+            width: 100%; max-width: 680px;
+            animation: heroUp 700ms 560ms cubic-bezier(0.22,1,0.36,1) both;
+        }
+        .cockpit-label { font-size: 8.5px; letter-spacing: 3px; color: rgba(138,180,212,0.22); text-transform: uppercase; text-align: center; margin-bottom: 14px; }
+        .cockpit-panel {
+            background: linear-gradient(160deg, rgba(10,12,18,0.97), rgba(5,6,10,0.98));
+            border: 1px solid rgba(195,215,240,0.10);
+            border-radius: 24px; padding: 32px 28px;
+            box-shadow: inset 0 1px 0 rgba(174,206,236,0.08), 0 32px 80px rgba(0,0,0,0.75), 0 0 60px rgba(138,180,212,0.07);
+            position: relative; overflow: hidden;
+        }
+        .cockpit-panel::before { content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 1px; background: linear-gradient(90deg, transparent, rgba(138,180,212,0.30) 50%, transparent); }
+        .bar-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+        .bar-row:last-child { margin-bottom: 0; }
+
+        .pill {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 16px; min-height: 38px; border-radius: 12px;
+            background: var(--glass); border: 1px solid var(--border);
+            box-shadow: inset 0 1px 0 rgba(174,206,236,0.09), inset 0 -1px 0 rgba(0,0,0,0.45), 0 5px 18px rgba(0,0,0,0.50);
+            font-size: 12.5px; color: rgba(220,232,250,0.80); white-space: nowrap; user-select: none; position: relative;
+        }
+        .pill-btn { cursor: pointer; transition: border-color 150ms, box-shadow 150ms; }
+        .pill-btn:hover { border-color: rgba(138,180,212,0.20); box-shadow: inset 0 1px 0 rgba(174,206,236,0.12), inset 0 -1px 0 rgba(0,0,0,0.45), 0 5px 18px rgba(0,0,0,0.50), 0 0 18px rgba(138,180,212,0.10); }
+        .pill-btn.active { border-color: rgba(138,180,212,0.30); box-shadow: inset 0 1px 0 rgba(174,206,236,0.12), inset 0 -1px 0 rgba(0,0,0,0.45), 0 5px 18px rgba(0,0,0,0.50), 0 0 24px rgba(138,180,212,0.16); }
+        .pill-icon { color: rgba(138,180,212,0.60); font-size: 13px; line-height: 1; }
+        .pill-dim { font-size: 10.5px; color: rgba(150,182,214,0.35); }
+        .stat-label { font-size: 7.5px; font-weight: 700; letter-spacing: 2px; color: rgba(138,166,198,0.38); display: block; }
+        .clock-time { font-size: 15px; font-weight: 650; letter-spacing: 0.6px; color: rgba(234,242,254,0.96); font-variant-numeric: tabular-nums; }
+        .clock-date { font-size: 11.5px; color: rgba(150,182,214,0.44); }
+
+        .pill-popup { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(6px); background: linear-gradient(rgba(10,13,19,0.99), rgba(5,6,11,0.99)); border: 1px solid rgba(195,215,240,0.12); border-radius: 14px; padding: 10px 12px; min-width: 155px; box-shadow: 0 16px 48px rgba(0,0,0,0.80), inset 0 1px 0 rgba(174,206,236,0.06), 0 0 24px rgba(138,180,212,0.06); opacity: 0; pointer-events: none; transition: opacity 150ms, transform 150ms; z-index: 20; }
+        .pill-popup.open { opacity: 1; pointer-events: all; transform: translateX(-50%) translateY(0); }
+        .popup-item { font-size: 12.5px; color: rgba(190,214,240,0.58); padding: 7px 10px; border-radius: 8px; cursor: pointer; transition: background 120ms, color 120ms; white-space: nowrap; }
+        .popup-item:hover { background: rgba(138,180,212,0.09); color: rgba(228,242,255,0.88); }
+        .popup-div { border-top: 1px solid rgba(195,215,240,0.07); margin: 4px 0; }
+        .popup-stat { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 5px 8px; font-size: 12px; color: rgba(220,232,250,0.68); }
+        .popup-stat-label { font-size: 10px; color: rgba(138,180,212,0.36); }
+        .vol-slider-wrap { padding: 8px 10px 6px; }
+        input[type=range].vol-slider { -webkit-appearance: none; width: 140px; height: 3px; border-radius: 2px; background: rgba(138,180,212,0.14); outline: none; cursor: pointer; display: block; }
+        input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: rgba(138,180,212,0.85); cursor: pointer; box-shadow: 0 0 8px rgba(138,180,212,0.45); }
+
+        .cockpit-hint { font-size: 9px; letter-spacing: 2px; color: rgba(138,180,212,0.18); text-transform: uppercase; text-align: center; margin-top: 12px; }
+
+        /* ── Section / Features ───────────────────────────────────── */
+        .section { padding: 90px 24px; max-width: 1080px; margin: 0 auto; }
+        .section-eyebrow { font-size: 9px; font-weight: 700; letter-spacing: 4px; color: rgba(138,180,212,0.36); text-transform: uppercase; text-align: center; margin-bottom: 12px; }
+        .section-title { font-size: clamp(24px,3.2vw,38px); font-weight: 650; color: rgba(234,242,254,0.93); text-align: center; letter-spacing: -0.5px; margin-bottom: 56px; }
+        .divider { width: 100%; max-width: 1080px; margin: 0 auto; height: 1px; background: linear-gradient(90deg, transparent, rgba(138,180,212,0.12) 30%, rgba(138,180,212,0.12) 70%, transparent); }
+
+        .feature-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+        @media (max-width: 820px) { .feature-grid { grid-template-columns: repeat(2,1fr); } }
+        @media (max-width: 520px) { .feature-grid { grid-template-columns: 1fr; } }
+
+        .feat-card { background: linear-gradient(160deg, rgba(14,17,24,0.95), rgba(7,8,14,0.97)); border: 1px solid rgba(195,215,240,0.085); border-radius: 18px; padding: 26px; box-shadow: inset 0 1px 0 rgba(174,206,236,0.07), 0 12px 36px rgba(0,0,0,0.45); }
+        .feat-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(138,180,212,0.07); border: 1px solid rgba(138,180,212,0.13); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+        .feat-icon svg { width: 18px; height: 18px; fill: none; stroke: rgba(138,180,212,0.70); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+        .feat-name { font-size: 16px; font-weight: 640; color: rgba(234,242,254,0.92); letter-spacing: -0.2px; margin-bottom: 8px; }
+        .feat-desc { font-size: 13px; color: rgba(165,190,218,0.52); line-height: 1.70; }
+
+        /* ── Spec table ───────────────────────────────────────────── */
+        .spec-table { width: 100%; border-collapse: collapse; }
+        .spec-table td { padding: 12px 0; border-bottom: 1px solid rgba(195,215,240,0.06); font-size: 13px; }
+        .spec-table td:first-child { color: rgba(138,180,212,0.44); width: 40%; font-size: 12px; letter-spacing: 0.3px; }
+        .spec-table td:last-child { color: rgba(220,232,250,0.72); font-family: "JetBrains Mono","SF Mono",monospace; font-size: 12.5px; }
+        .spec-table tr:last-child td { border-bottom: none; }
+
+        /* ── More apps ───────────────────────────────────────────── */
+        .more-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+        @media (max-width: 700px) { .more-grid { grid-template-columns: repeat(2,1fr); } }
+        .more-card { background: linear-gradient(160deg, rgba(14,17,24,0.95), rgba(7,8,14,0.97)); border: 1px solid rgba(195,215,240,0.07); border-radius: 14px; padding: 16px 18px; text-decoration: none; display: block; transition: border-color 150ms, transform 180ms; }
+        .more-card:hover { border-color: rgba(138,180,212,0.16); transform: translateY(-2px); }
+        .more-card-name { font-size: 13.5px; font-weight: 600; color: rgba(220,232,250,0.80); margin-bottom: 4px; }
+        .more-card-sub { font-size: 11px; color: rgba(138,180,212,0.34); }
+
+        /* ── Footer ─────────────────────────────────────────────── */
+        footer { border-top: 1px solid rgba(195,215,240,0.05); padding: 50px 24px; text-align: center; }
+        .footer-brand { font-size: 9px; font-weight: 700; letter-spacing: 5px; color: rgba(138,180,212,0.26); text-transform: uppercase; margin-bottom: 8px; }
+        .footer-text { font-size: 11px; color: rgba(150,182,214,0.18); }
+    </style>
+</head>
+<body>
+
+<div id="scroll-progress"></div>
+
+<div class="nav-wrap">
+    <nav>
+        <a class="nav-brand" href="index.html">VELO</a>
+        <div class="nav-sep"></div>
+        <a class="nav-back" href="index.html#suite">← Suite</a>
+        <a class="nav-link" href="index.html#install">Install</a>
+        <a class="nav-link" href="velo-browser.html">Browser</a>
+        <a class="nav-link" href="velo-launcher.html">Launcher</a>
+    </nav>
+</div>
+
+<!-- ── Hero ───────────────────────────────────────────────────────────── -->
+<section class="hero">
+    <div class="hero-glow"></div>
+    <p class="breadcrumb"><a href="index.html">Velo</a> / Shell</p>
+    <p class="hero-eyebrow">System Bar</p>
+    <h1 class="hero-title">The cockpit<br><em>instrument cluster</em></h1>
+    <p class="hero-sub">Floating machined-glass pills anchor to the top of your screen. Clock, stats, battery, network, Bluetooth, volume, media — all in a unified layer above your wallpaper.</p>
+
+    <div class="cockpit-demo-wrap">
+        <p class="cockpit-label">Live demo — click the pills</p>
+        <div class="cockpit-panel">
+            <div class="bar-row">
+                <!-- Power -->
+                <div class="pill pill-btn" id="pill-power" onclick="togglePopup('power-menu',event)">
+                    <span class="pill-icon">⏻</span>
+                    <div class="pill-popup" id="power-menu">
+                        <div class="popup-item">Shutdown</div>
+                        <div class="popup-item">Restart</div>
+                        <div class="popup-item">Suspend</div>
+                        <div class="popup-div"></div>
+                        <div class="popup-item" style="color:rgba(138,180,212,0.36)">Lock</div>
+                    </div>
+                </div>
+                <!-- CPU/RAM -->
+                <div class="pill">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                        <span class="stat-label">CPU</span>
+                        <span id="demo-cpu">12%</span>
+                    </div>
+                    <span class="pill-dim">/</span>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                        <span class="stat-label">RAM</span>
+                        <span id="demo-ram">4.1G</span>
+                    </div>
+                </div>
+                <!-- Bluetooth toggle -->
+                <div class="pill pill-btn" id="pill-bt" onclick="toggleBT(event)">
+                    <span class="pill-icon" id="bt-icon" style="font-size:11px">⬡</span>
+                    <span id="bt-label" style="font-size:11.5px">BT</span>
+                </div>
+            </div>
+
+            <!-- Clock row -->
+            <div class="bar-row">
+                <div class="pill pill-btn" onclick="togglePopup('cal-popup',event)" style="padding:7px 24px">
+                    <div style="text-align:center">
+                        <div class="clock-time" id="demo-time">--:--</div>
+                        <div class="clock-date" id="demo-date">--- -- --</div>
+                    </div>
+                    <div class="pill-popup" id="cal-popup" style="min-width:200px">
+                        <div style="padding:8px 10px">
+                            <div style="font-size:11px;color:rgba(138,180,212,0.55);letter-spacing:1px;text-align:center;margin-bottom:10px" id="cal-month-label">June 2026</div>
+                            <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:11px"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom row -->
+            <div class="bar-row">
+                <!-- Media -->
+                <div class="pill pill-btn" id="pill-media" onclick="toggleMedia(event)">
+                    <span class="pill-icon" id="media-icon">▶</span>
+                    <span id="media-label" style="font-size:11.5px;max-width:90px;overflow:hidden;text-overflow:ellipsis">Boards of Canada</span>
+                </div>
+                <!-- Network -->
+                <div class="pill pill-btn" onclick="togglePopup('net-menu',event)">
+                    <span class="pill-icon">▴</span>
+                    <span>WiFi</span>
+                    <span class="pill-dim">5G</span>
+                    <div class="pill-popup" id="net-menu">
+                        <div class="popup-stat"><span class="popup-stat-label">↓ Down</span><span id="net-down">23.4 MB/s</span></div>
+                        <div class="popup-stat"><span class="popup-stat-label">↑ Up</span><span id="net-up">2.1 MB/s</span></div>
+                        <div class="popup-stat"><span class="popup-stat-label">Signal</span><span>-48 dBm</span></div>
+                    </div>
+                </div>
+                <!-- Volume -->
+                <div class="pill pill-btn" onclick="togglePopup('vol-popup',event)">
+                    <span class="pill-icon">♪</span>
+                    <span id="demo-vol">72%</span>
+                    <div class="pill-popup" id="vol-popup">
+                        <div class="vol-slider-wrap">
+                            <input type="range" class="vol-slider" min="0" max="100" value="72"
+                                oninput="setVolume(this.value)" onclick="event.stopPropagation()">
+                        </div>
+                        <div class="popup-stat"><span class="popup-stat-label">Device</span><span style="font-size:11px">Headphones</span></div>
+                    </div>
+                </div>
+                <!-- Battery -->
+                <div class="pill pill-btn" onclick="togglePopup('bat-popup',event)">
+                    <span class="pill-icon" style="font-size:10px">⬡</span>
+                    <span id="demo-bat">84%</span>
+                    <span class="pill-dim">↑</span>
+                    <div class="pill-popup" id="bat-popup">
+                        <div class="popup-stat"><span class="popup-stat-label">Status</span><span>Charging</span></div>
+                        <div class="popup-stat"><span class="popup-stat-label">Full in</span><span>1h 12m</span></div>
+                        <div class="popup-stat"><span class="popup-stat-label">Health</span><span>94%</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="cockpit-hint">Click any pill · Scroll to dismiss</p>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Features ───────────────────────────────────────────────────────── -->
+<section class="section">
+    <p class="section-eyebrow reveal">What's inside</p>
+    <h2 class="section-title reveal d1">Every instrument deliberate</h2>
+
+    <div class="feature-grid">
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg></div><div class="feat-name">Live Clock</div><p class="feat-desc">Displays current time and date. Clicking opens a mini calendar popup for quick date reference.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M6 16h.01M10 16h.01"/></svg></div><div class="feat-name">CPU &amp; RAM</div><p class="feat-desc">Live system stats with smooth animation. Values update every 2 seconds with a subtle pulse.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="feat-name">Battery</div><p class="feat-desc">Current charge percent, charging state, and estimated time to full or empty on click.</p></div>
+        <div class="feat-card reveal d3"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1" class="filled" style="fill:rgba(138,180,212,0.72);stroke:none"/></svg></div><div class="feat-name">Network</div><p class="feat-desc">WiFi signal indicator with click-to-expand speed popup showing live download and upload rates.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M11.5 21h-4.5a2 2 0 01-2-2v-14a2 2 0 012-2h10a2 2 0 012 2v5"/><path d="M18 14v4l3 2"/><circle cx="18" cy="18" r="5"/></svg></div><div class="feat-name">Bluetooth</div><p class="feat-desc">Toggle Bluetooth on and off with a single click. Glows blue when active with connected device list.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg></div><div class="feat-name">Volume</div><p class="feat-desc">Current volume percent. Click to reveal a precision drag slider synced to the OSD overlay.</p></div>
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="feat-name">Media Controls</div><p class="feat-desc">Displays current track from any MPRIS source. Click to play/pause, scroll to seek.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="feat-name">Power Menu</div><p class="feat-desc">Shutdown, restart, suspend, lock — all accessible from the power pill with a single click.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div><div class="feat-name">GTK4 Layer Shell</div><p class="feat-desc">Renders above all windows using gtk4-layer-shell. Works on any Wayland compositor that supports the protocol.</p></div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Spec ───────────────────────────────────────────────────────────── -->
+<section class="section" style="max-width:680px">
+    <p class="section-eyebrow reveal">Specification</p>
+    <h2 class="section-title reveal d1">Built details</h2>
+    <table class="spec-table reveal d2">
+        <tr><td>Language</td><td>Rust</td></tr>
+        <tr><td>UI toolkit</td><td>GTK4 + gtk4-layer-shell</td></tr>
+        <tr><td>Compositor</td><td>Niri (any wlr-layer-shell compositor)</td></tr>
+        <tr><td>Audio</td><td>PipeWire / PulseAudio via libpulse</td></tr>
+        <tr><td>Media</td><td>MPRIS D-Bus protocol</td></tr>
+        <tr><td>Network</td><td>NetworkManager D-Bus</td></tr>
+        <tr><td>Battery</td><td>/sys/class/power_supply</td></tr>
+        <tr><td>Bluetooth</td><td>BlueZ D-Bus</td></tr>
+        <tr><td>Build</td><td>cargo build --release</td></tr>
+    </table>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── More apps ──────────────────────────────────────────────────────── -->
+<section class="section">
+    <p class="section-eyebrow reveal">The Suite</p>
+    <h2 class="section-title reveal d1">More from Velo</h2>
+    <div class="more-grid">
+        <a class="more-card reveal" href="velo-browser.html"><div class="more-card-name">Velo Browser</div><div class="more-card-sub">WebKit cockpit browser</div></a>
+        <a class="more-card reveal d1" href="velo-launcher.html"><div class="more-card-name">Velo Launcher</div><div class="more-card-sub">Fuzzy app launcher</div></a>
+        <a class="more-card reveal d2" href="velo-paper.html"><div class="more-card-name">Velo Paper</div><div class="more-card-sub">Wallpaper switcher</div></a>
+        <a class="more-card reveal d3" href="velo-osd.html"><div class="more-card-name">Velo OSD</div><div class="more-card-sub">Volume &amp; brightness overlay</div></a>
+        <a class="more-card reveal" href="velo-player.html"><div class="more-card-name">Velo Player</div><div class="more-card-sub">Spotify vinyl client</div></a>
+        <a class="more-card reveal d1" href="velo-files.html"><div class="more-card-name">Velo Files</div><div class="more-card-sub">Glass file manager</div></a>
+        <a class="more-card reveal d2" href="velo-commit.html"><div class="more-card-name">Velo Commit</div><div class="more-card-sub">AI git commit tool</div></a>
+        <a class="more-card reveal d3" href="velo-assistant.html"><div class="more-card-name">Velo Assistant</div><div class="more-card-sub">Claude chat GUI</div></a>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-brand">Velo Shell</div>
+    <div class="footer-text">GTK4 · Rust · Layer Shell · Wayland</div>
+</footer>
+
+<script>
+(function(){
+    const el = document.getElementById('scroll-progress');
+    window.addEventListener('scroll', () => { const t = document.documentElement.scrollHeight - window.innerHeight; el.style.transform = `scaleX(${window.scrollY/t})`; }, {passive:true});
+})();
+
+(function(){
+    const io = new IntersectionObserver(e => e.forEach(x => { if(!x.isIntersecting) return; x.target.classList.add('in'); io.unobserve(x.target); }), {threshold:0.08});
+    document.querySelectorAll('.reveal,.reveal-left,.reveal-right').forEach(el => io.observe(el));
+})();
+
+let openPopup = null;
+window.togglePopup = function(id, e) {
+    if(e) e.preventDefault();
+    const p = document.getElementById(id);
+    if(!p) return;
+    if(openPopup && openPopup !== p) openPopup.classList.remove('open');
+    p.classList.toggle('open');
+    openPopup = p.classList.contains('open') ? p : null;
+};
+document.addEventListener('click', e => { if(openPopup && !e.target.closest('.pill-btn')) { openPopup.classList.remove('open'); openPopup = null; } });
+
+window.toggleBT = function(e) {
+    e.preventDefault();
+    const pill = document.getElementById('pill-bt');
+    const on = pill.classList.toggle('active');
+    document.getElementById('bt-icon').style.color = on ? 'rgba(138,180,212,0.90)' : '';
+    document.getElementById('bt-label').textContent = on ? 'On' : 'BT';
+};
+
+let playing = false;
+window.toggleMedia = function(e) {
+    e.preventDefault();
+    playing = !playing;
+    document.getElementById('media-icon').textContent = playing ? '⏸' : '▶';
+};
+
+window.setVolume = function(v) {
+    document.getElementById('demo-vol').textContent = Math.round(v) + '%';
+};
+
+// Clock
+(function(){
+    const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function tick(){
+        const d=new Date(), h=String(d.getHours()).padStart(2,'0'), m=String(d.getMinutes()).padStart(2,'0');
+        document.getElementById('demo-time').textContent=`${h}:${m}`;
+        document.getElementById('demo-date').textContent=`${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
+    }
+    tick(); setInterval(tick,10000);
+
+    // Mini calendar
+    function buildCal() {
+        const d = new Date(), y = d.getFullYear(), mo = d.getMonth(), today = d.getDate();
+        const ml = document.getElementById('cal-month-label');
+        if(ml) ml.textContent = `${months[mo]} ${y}`;
+        const grid = document.getElementById('cal-grid');
+        if(!grid) return;
+        const first = new Date(y, mo, 1).getDay();
+        const total = new Date(y, mo+1, 0).getDate();
+        let html = ['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=>`<span style="color:rgba(138,180,212,0.28);font-size:10px">${d}</span>`).join('');
+        for(let i=0;i<first;i++) html += '<span></span>';
+        for(let i=1;i<=total;i++) {
+            const active = i===today;
+            html += `<span style="padding:3px 0;border-radius:5px;cursor:default;${active?'background:rgba(138,180,212,0.14);color:rgba(190,222,255,0.90)':'color:rgba(190,214,240,0.46)'}">${i}</span>`;
+        }
+        grid.innerHTML = html;
+    }
+    buildCal();
+})();
+
+// CPU/RAM sim
+let cpu=12,ram=4.1;
+setInterval(()=>{
+    cpu=Math.max(2,Math.min(85,cpu+(Math.random()-0.48)*14));
+    ram=Math.max(1.8,Math.min(15.9,ram+(Math.random()-0.5)*0.3));
+    document.getElementById('demo-cpu').textContent=Math.round(cpu)+'%';
+    document.getElementById('demo-ram').textContent=ram.toFixed(1)+'G';
+},2200);
+
+// Net speed sim
+let nd=23.4,nu=2.1;
+setInterval(()=>{
+    nd=Math.max(0.1,nd+(Math.random()-0.5)*10);
+    nu=Math.max(0.1,nu+(Math.random()-0.5)*2);
+    const dn=document.getElementById('net-down'); if(dn) dn.textContent=nd.toFixed(1)+' MB/s';
+    const un=document.getElementById('net-up');   if(un) un.textContent=nu.toFixed(1)+' MB/s';
+},1600);
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo Launcher — Fuzzy App Launcher</title>
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        :root{--accent:#8ab4d4;--bg:#09090c;--text:rgba(228,238,252,0.88);--text-sub:rgba(165,190,218,0.55);--border:rgba(195,215,240,0.09);--glass:linear-gradient(rgba(18,21,28,0.94),rgba(7,8,13,0.96))}
+        html{scroll-behavior:smooth}
+        body{background:var(--bg);color:var(--text);font-family:"Inter","SF Pro Display","Cantarell",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;opacity:0.028;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)'/%3E%3C/svg%3E")}
+        #scroll-progress{position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,rgba(80,140,190,0.6),rgba(138,180,212,0.9) 50%,rgba(170,215,245,1));transform-origin:left;transform:scaleX(0);z-index:9100;pointer-events:none;transition:transform 60ms linear}
+        .nav-wrap{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;padding:14px 24px;z-index:500;pointer-events:none}
+        nav{pointer-events:all;display:flex;align-items:center;padding:3px 5px;border-radius:999px;background:var(--glass);border:1px solid var(--border);box-shadow:inset 0 1px 0 rgba(174,206,236,0.09),inset 0 -1px 0 rgba(0,0,0,0.50),0 8px 32px rgba(0,0,0,0.65),0 0 40px rgba(138,180,212,0.05);position:relative}
+        nav::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.38) 50%,transparent)}
+        .nav-brand{font-size:9.5px;font-weight:700;letter-spacing:4.5px;color:rgba(138,180,212,0.48);padding:6px 16px 6px 12px;text-decoration:none;transition:color 160ms}
+        .nav-brand:hover{color:rgba(190,222,250,0.90)}
+        .nav-sep{width:1px;height:16px;background:rgba(195,215,240,0.07);margin:0 2px}
+        .nav-link{font-size:12.5px;font-weight:450;color:rgba(190,214,240,0.44);text-decoration:none;padding:5px 14px;border-radius:999px;transition:background 110ms,color 110ms;white-space:nowrap}
+        .nav-link:hover{background:rgba(138,180,212,0.10);color:rgba(228,242,255,0.90)}
+        .nav-back{font-size:12px;color:rgba(138,180,212,0.38);text-decoration:none;padding:5px 12px;border-radius:999px;transition:color 120ms}
+        .nav-back:hover{color:rgba(190,222,250,0.75)}
+        .reveal{opacity:0;transform:translateY(24px)}.reveal.in{opacity:1;transform:none;transition:opacity 700ms cubic-bezier(0.22,1,0.36,1),transform 700ms cubic-bezier(0.22,1,0.36,1)}
+        .d1{transition-delay:90ms}.d2{transition-delay:180ms}.d3{transition-delay:270ms}.d4{transition-delay:360ms}
+        @keyframes heroUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+        .hero{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:110px 24px 80px;text-align:center;overflow:hidden}
+        .hero-glow{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);width:1000px;height:500px;background:radial-gradient(ellipse,rgba(138,180,212,0.065) 0%,transparent 65%);pointer-events:none}
+        .breadcrumb{font-size:11px;color:rgba(138,180,212,0.30);letter-spacing:0.5px;margin-bottom:18px;animation:heroUp 700ms 100ms cubic-bezier(0.22,1,0.36,1) both}
+        .breadcrumb a{color:rgba(138,180,212,0.42);text-decoration:none}
+        .hero-eyebrow{font-size:9px;font-weight:700;letter-spacing:5px;color:rgba(138,180,212,0.42);text-transform:uppercase;margin-bottom:22px;animation:heroUp 700ms 200ms cubic-bezier(0.22,1,0.36,1) both}
+        .hero-title{font-size:clamp(44px,7vw,88px);font-weight:750;line-height:1.0;letter-spacing:-2px;color:rgba(234,242,254,0.96);margin-bottom:22px;animation:heroUp 700ms 320ms cubic-bezier(0.22,1,0.36,1) both}
+        .hero-title em{font-style:normal;color:var(--accent)}
+        .hero-sub{font-size:15px;color:var(--text-sub);max-width:480px;line-height:1.75;margin-bottom:52px;animation:heroUp 700ms 440ms cubic-bezier(0.22,1,0.36,1) both}
+
+        /* Launcher demo */
+        .launcher-wrap{width:100%;max-width:520px;animation:heroUp 700ms 560ms cubic-bezier(0.22,1,0.36,1) both;display:flex;flex-direction:column;align-items:center;gap:0}
+        .results-panel{width:100%;background:linear-gradient(160deg,rgba(10,12,18,0.97),rgba(5,6,10,0.98));border:1px solid rgba(195,215,240,0.10);border-radius:18px 18px 0 0;padding:8px;box-shadow:inset 0 1px 0 rgba(174,206,236,0.07),0 -4px 24px rgba(0,0,0,0.40);transform-origin:bottom;transition:height 200ms ease}
+        .result-item{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:12px;cursor:pointer;transition:background 100ms;user-select:none}
+        .result-item.selected{background:rgba(138,180,212,0.11)}
+        .result-item:hover{background:rgba(138,180,212,0.07)}
+        .r-icon{width:32px;height:32px;border-radius:9px;background:rgba(138,180,212,0.09);border:1px solid rgba(138,180,212,0.12);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+        .r-name{font-size:14px;font-weight:500;color:rgba(220,234,252,0.82)}
+        .r-sub{font-size:11px;color:rgba(138,180,212,0.34);margin-top:1px}
+        .r-name em{font-style:normal;color:rgba(170,210,240,0.90)}
+        .search-pill{width:100%;display:flex;align-items:center;gap:10px;padding:10px 18px;min-height:48px;border-radius:0 0 18px 18px;background:var(--glass);border:1px solid var(--border);border-top:none;box-shadow:inset 0 -1px 0 rgba(0,0,0,0.45),0 8px 28px rgba(0,0,0,0.60),0 0 40px rgba(138,180,212,0.06);position:relative}
+        .search-pill::before{content:'';position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.20) 50%,transparent)}
+        .search-icon{color:rgba(138,180,212,0.45);font-size:14px;flex-shrink:0}
+        .search-input{flex:1;background:none;border:none;outline:none;font-family:inherit;font-size:14px;color:rgba(228,242,255,0.88);letter-spacing:0.1px}
+        .search-input::placeholder{color:rgba(138,180,212,0.24)}
+        .search-hint{font-size:10px;color:rgba(138,180,212,0.20);white-space:nowrap}
+
+        .section{padding:90px 24px;max-width:1080px;margin:0 auto}
+        .section-eyebrow{font-size:9px;font-weight:700;letter-spacing:4px;color:rgba(138,180,212,0.36);text-transform:uppercase;text-align:center;margin-bottom:12px}
+        .section-title{font-size:clamp(24px,3.2vw,38px);font-weight:650;color:rgba(234,242,254,0.93);text-align:center;letter-spacing:-0.5px;margin-bottom:56px}
+        .divider{width:100%;max-width:1080px;margin:0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(138,180,212,0.12) 30%,rgba(138,180,212,0.12) 70%,transparent)}
+        .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+        @media(max-width:820px){.feature-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:520px){.feature-grid{grid-template-columns:1fr}}
+        .feat-card{background:linear-gradient(160deg,rgba(14,17,24,0.95),rgba(7,8,14,0.97));border:1px solid rgba(195,215,240,0.085);border-radius:18px;padding:26px;box-shadow:inset 0 1px 0 rgba(174,206,236,0.07),0 12px 36px rgba(0,0,0,0.45)}
+        .feat-icon{width:40px;height:40px;border-radius:12px;background:rgba(138,180,212,0.07);border:1px solid rgba(138,180,212,0.13);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+        .feat-icon svg{width:18px;height:18px;fill:none;stroke:rgba(138,180,212,0.70);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+        .feat-name{font-size:16px;font-weight:640;color:rgba(234,242,254,0.92);letter-spacing:-0.2px;margin-bottom:8px}
+        .feat-desc{font-size:13px;color:rgba(165,190,218,0.52);line-height:1.70}
+        .more-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+        @media(max-width:700px){.more-grid{grid-template-columns:repeat(2,1fr)}}
+        .more-card{background:linear-gradient(160deg,rgba(14,17,24,0.95),rgba(7,8,14,0.97));border:1px solid rgba(195,215,240,0.07);border-radius:14px;padding:16px 18px;text-decoration:none;display:block;transition:border-color 150ms,transform 180ms}
+        .more-card:hover{border-color:rgba(138,180,212,0.16);transform:translateY(-2px)}
+        .more-card-name{font-size:13.5px;font-weight:600;color:rgba(220,232,250,0.80);margin-bottom:4px}
+        .more-card-sub{font-size:11px;color:rgba(138,180,212,0.34)}
+        footer{border-top:1px solid rgba(195,215,240,0.05);padding:50px 24px;text-align:center}
+        .footer-brand{font-size:9px;font-weight:700;letter-spacing:5px;color:rgba(138,180,212,0.26);text-transform:uppercase;margin-bottom:8px}
+        .footer-text{font-size:11px;color:rgba(150,182,214,0.18)}
+    </style>
+</head>
+<body>
+
+<div id="scroll-progress"></div>
+
+<div class="nav-wrap">
+    <nav>
+        <a class="nav-brand" href="index.html">VELO</a>
+        <div class="nav-sep"></div>
+        <a class="nav-back" href="index.html#suite">← Suite</a>
+        <a class="nav-link" href="velo-bar.html">Shell</a>
+        <a class="nav-link" href="velo-browser.html">Browser</a>
+        <a class="nav-link" href="index.html#install">Install</a>
+    </nav>
+</div>
+
+<section class="hero">
+    <div class="hero-glow"></div>
+    <p class="breadcrumb"><a href="index.html">Velo</a> / Launcher</p>
+    <p class="hero-eyebrow">App Launcher</p>
+    <h1 class="hero-title">Fuzzy search<br>for <em>zero mouse</em></h1>
+    <p class="hero-sub">A single glass search pill docks at the bottom centre of your display. Type anything — apps, recent files, commands — and results float above it as you type. Keyboard only.</p>
+
+    <div class="launcher-wrap">
+        <div class="results-panel" id="results-panel">
+            <!-- filled by JS -->
+        </div>
+        <div class="search-pill">
+            <span class="search-icon">⌕</span>
+            <input class="search-input" id="search-input" placeholder="Search apps…" autocomplete="off" spellcheck="false">
+            <span class="search-hint">↑↓ navigate · ↵ launch</span>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="section">
+    <p class="section-eyebrow reveal">Features</p>
+    <h2 class="section-title reveal d1">Fast. Precise. Keyboard-first.</h2>
+    <div class="feature-grid">
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></div><div class="feat-name">Fuzzy Matching</div><p class="feat-desc">Smith-Waterman fuzzy search ranks results by quality. Type "vrox" to find "Firefox". Typo-tolerant.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M8 4v16M8 4l-5 5M8 4l5 5"/></svg></div><div class="feat-name">Keyboard Nav</div><p class="feat-desc">Arrow keys to navigate. Enter to launch. Escape to dismiss. Every interaction reachable without a mouse.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div><div class="feat-name">App Icons</div><p class="feat-desc">Displays the system icon for every application using the XDG icon theme. Scales to HiDPI.</p></div>
+        <div class="feat-card reveal"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><div class="feat-name">Instant Launch</div><p class="feat-desc">No startup delay. The daemon pre-scans your .desktop files on login so the pill opens in &lt;80ms.</p></div>
+        <div class="feat-card reveal d1"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div><div class="feat-name">Custom Commands</div><p class="feat-desc">Prefix with ":" to run arbitrary shell commands. Results pipe into a read-only output panel.</p></div>
+        <div class="feat-card reveal d2"><div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.07 1.18 2 2 0 012.03 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg></div><div class="feat-name">Layer Shell</div><p class="feat-desc">Rendered with gtk4-layer-shell at OVERLAY priority. Appears above all windows including fullscreen games.</p></div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="section">
+    <p class="section-eyebrow reveal">More from Velo</p>
+    <h2 class="section-title reveal d1">The Suite</h2>
+    <div class="more-grid">
+        <a class="more-card reveal" href="velo-bar.html"><div class="more-card-name">Velo Shell</div><div class="more-card-sub">Cockpit instrument bar</div></a>
+        <a class="more-card reveal d1" href="velo-browser.html"><div class="more-card-name">Velo Browser</div><div class="more-card-sub">WebKit cockpit browser</div></a>
+        <a class="more-card reveal d2" href="velo-paper.html"><div class="more-card-name">Velo Paper</div><div class="more-card-sub">Wallpaper switcher</div></a>
+        <a class="more-card reveal d3" href="velo-osd.html"><div class="more-card-name">Velo OSD</div><div class="more-card-sub">Volume overlay</div></a>
+        <a class="more-card reveal" href="velo-player.html"><div class="more-card-name">Velo Player</div><div class="more-card-sub">Spotify vinyl client</div></a>
+        <a class="more-card reveal d1" href="velo-files.html"><div class="more-card-name">Velo Files</div><div class="more-card-sub">Glass file manager</div></a>
+        <a class="more-card reveal d2" href="velo-commit.html"><div class="more-card-name">Velo Commit</div><div class="more-card-sub">AI git tool</div></a>
+        <a class="more-card reveal d3" href="velo-assistant.html"><div class="more-card-name">Velo Assistant</div><div class="more-card-sub">Claude chat GUI</div></a>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-brand">Velo Launcher</div>
+    <div class="footer-text">GTK4 · Layer Shell · Rust · Wayland</div>
+</footer>
+
+<script>
+(function(){const el=document.getElementById('scroll-progress');window.addEventListener('scroll',()=>{const t=document.documentElement.scrollHeight-window.innerHeight;el.style.transform=`scaleX(${window.scrollY/t})`;},{passive:true});})();
+(function(){const io=new IntersectionObserver(e=>e.forEach(x=>{if(!x.isIntersecting)return;x.target.classList.add('in');io.unobserve(x.target);}),{threshold:0.08});document.querySelectorAll('.reveal').forEach(el=>io.observe(el));})();
+
+const APPS = [
+    {icon:'🌐',name:'Firefox',sub:'Web Browser'},
+    {icon:'📝',name:'Neovim',sub:'Text Editor'},
+    {icon:'🎵',name:'Velo Player',sub:'Music Player'},
+    {icon:'📁',name:'Velo Files',sub:'File Manager'},
+    {icon:'🖥',name:'Alacritty',sub:'Terminal'},
+    {icon:'📷',name:'Shotwell',sub:'Photo Manager'},
+    {icon:'⚙',name:'Settings',sub:'System Settings'},
+    {icon:'🎮',name:'Steam',sub:'Game Launcher'},
+    {icon:'📄',name:'Libreoffice',sub:'Office Suite'},
+    {icon:'🔊',name:'Pavucontrol',sub:'Audio Mixer'},
+    {icon:'🗓',name:'GNOME Calendar',sub:'Calendar'},
+    {icon:'🔍',name:'Velo Launcher',sub:'App Launcher'},
+];
+
+function fuzzy(query, str) {
+    const q = query.toLowerCase(), s = str.toLowerCase();
+    let score = 0, qi = 0, si = 0;
+    while (qi < q.length && si < s.length) {
+        if (q[qi] === s[si]) { score += (qi === si ? 2 : 1); qi++; }
+        si++;
+    }
+    return qi === q.length ? score : -1;
+}
+
+function highlight(name, query) {
+    const q = query.toLowerCase();
+    let result = '', qi = 0;
+    for (let i = 0; i < name.length; i++) {
+        if (qi < q.length && name[i].toLowerCase() === q[qi]) {
+            result += `<em>${name[i]}</em>`;
+            qi++;
+        } else {
+            result += name[i];
+        }
+    }
+    return result;
+}
+
+let selected = 0;
+
+function render(query) {
+    const panel = document.getElementById('results-panel');
+    let results = APPS;
+    if (query) {
+        results = APPS.map(a => ({ ...a, score: fuzzy(query, a.name) }))
+            .filter(a => a.score >= 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 6);
+    } else {
+        results = APPS.slice(0, 5);
+    }
+    if (results.length === 0) {
+        panel.innerHTML = `<div style="padding:14px 12px;text-align:center;font-size:12.5px;color:rgba(138,180,212,0.28)">No results</div>`;
+        return;
+    }
+    selected = Math.min(selected, results.length - 1);
+    panel.innerHTML = results.map((a, i) =>
+        `<div class="result-item${i === selected ? ' selected' : ''}" onclick="selectItem(${i})">
+            <div class="r-icon">${a.icon}</div>
+            <div>
+                <div class="r-name">${query ? highlight(a.name, query) : a.name}</div>
+                <div class="r-sub">${a.sub}</div>
+            </div>
+        </div>`
+    ).join('');
+}
+
+window.selectItem = function(i) { selected = i; render(document.getElementById('search-input').value); };
+
+const input = document.getElementById('search-input');
+input.addEventListener('input', e => { selected = 0; render(e.target.value); });
+input.addEventListener('keydown', e => {
+    const panel = document.getElementById('results-panel');
+    const items = panel.querySelectorAll('.result-item');
+    if (e.key === 'ArrowDown') { selected = Math.min(selected + 1, items.length - 1); render(input.value); e.preventDefault(); }
+    if (e.key === 'ArrowUp')   { selected = Math.max(selected - 1, 0); render(input.value); e.preventDefault(); }
+    if (e.key === 'Enter') {
+        const sel = panel.querySelector('.result-item.selected');
+        if (sel) { sel.style.background = 'rgba(138,180,212,0.22)'; setTimeout(() => render(input.value), 200); }
+    }
+});
+
+render('');
+setTimeout(() => input.focus(), 800);
+</script>
+</body>
+</html>
